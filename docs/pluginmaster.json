@@ -1,0 +1,18 @@
+[
+  {
+    "Author": "NalaPraline",
+    "Name": "Zone",
+    "InternalName": "Zone",
+    "AssemblyVersion": "1.0.6.0",
+    "Punchline": "The official ZONE event companion plugin.",
+    "Description": "Zone is the all-in-one companion for ZONE events. Features a live DJ lineup, activity tracker, staff directory, Zone Vision HUD overlay, and midnight time lock.\n\nCommands:\n/zone - Open Zone\n/zonevision - Toggle HUD overlay",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 14,
+    "Tags": ["venue", "nightclub", "schedule", "dj", "event", "zone"],
+    "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png",
+    "RepoUrl": "https://github.com/NalaPraline/ZONE",
+    "DownloadLinkInstall": "https://github.com/NalaPraline/ZONE/releases/latest/download/latest.zip",
+    "DownloadLinkTesting": "https://github.com/NalaPraline/ZONE/releases/latest/download/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NalaPraline/ZONE/releases/latest/download/latest.zip"
+  }
+]
