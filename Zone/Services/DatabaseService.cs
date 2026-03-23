@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Data.Sqlite;
 using Zone.Models;
 
@@ -13,9 +11,7 @@ public class DatabaseService : IDisposable
     private readonly string _connectionString;
     private PluginConfig? _configCache;
 
-    private const string DefaultPassword = "zone2025";
-
-    public DatabaseService()
+public DatabaseService()
     {
         var dir = Plugin.PluginInterface.ConfigDirectory.FullName;
         Directory.CreateDirectory(dir);
@@ -102,14 +98,7 @@ public class DatabaseService : IDisposable
             ";
             cmd.ExecuteNonQuery();
 
-            // Set default admin password if not set
-            var config = ReadConfigFromDb(conn);
-            if (string.IsNullOrEmpty(config.AdminPasswordHash))
-            {
-                config.AdminPasswordHash = HashPassword(DefaultPassword);
-                WriteConfigToDb(conn, config);
-            }
-            _configCache = config;
+            _configCache = ReadConfigFromDb(conn);
 
             // Migrations for older installs
             RunMigration(conn, "ALTER TABLE Staff ADD COLUMN ContentId INTEGER DEFAULT 0");
@@ -163,18 +152,16 @@ public class DatabaseService : IDisposable
     private static PluginConfig ReadConfigFromDb(SqliteConnection conn)
     {
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT ZoneVisionEnabled, TimeLockEnabled, NotificationsEnabled, LastSeenDjId, AdminPasswordHash, StaffApiUrl FROM Config WHERE Id = 1";
+        cmd.CommandText = "SELECT ZoneVisionEnabled, TimeLockEnabled, NotificationsEnabled, LastSeenDjId FROM Config WHERE Id = 1";
         using var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
             return new PluginConfig
             {
-                ZoneVisionEnabled = reader.GetInt32(0) == 1,
-                TimeLockEnabled = reader.GetInt32(1) == 1,
+                ZoneVisionEnabled    = reader.GetInt32(0) == 1,
+                TimeLockEnabled      = reader.GetInt32(1) == 1,
                 NotificationsEnabled = reader.GetInt32(2) == 1,
-                LastSeenDjId = reader.GetInt32(3),
-                AdminPasswordHash = reader.IsDBNull(4) ? "" : reader.GetString(4),
-                StaffApiUrl = reader.IsDBNull(5) ? "" : reader.GetString(5)
+                LastSeenDjId         = reader.GetInt32(3),
             };
         }
         return new PluginConfig();
@@ -188,16 +175,12 @@ public class DatabaseService : IDisposable
                 ZoneVisionEnabled = @zv,
                 TimeLockEnabled = @tl,
                 NotificationsEnabled = @notif,
-                LastSeenDjId = @lastDj,
-                AdminPasswordHash = @pass,
-                StaffApiUrl = @apiUrl
+                LastSeenDjId = @lastDj
             WHERE Id = 1";
         cmd.Parameters.AddWithValue("@zv", config.ZoneVisionEnabled ? 1 : 0);
         cmd.Parameters.AddWithValue("@tl", config.TimeLockEnabled ? 1 : 0);
         cmd.Parameters.AddWithValue("@notif", config.NotificationsEnabled ? 1 : 0);
         cmd.Parameters.AddWithValue("@lastDj", config.LastSeenDjId);
-        cmd.Parameters.AddWithValue("@pass", config.AdminPasswordHash);
-        cmd.Parameters.AddWithValue("@apiUrl", config.StaffApiUrl ?? "");
         cmd.ExecuteNonQuery();
     }
 
@@ -647,13 +630,7 @@ public class DatabaseService : IDisposable
         Color     = r.IsDBNull(11) ? null : r.GetString(11)
     };
 
-    public static string HashPassword(string password)
-        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(password))).ToLower();
-
-    public static bool VerifyPassword(string input, string storedHash)
-        => HashPassword(input) == storedHash;
-
-    public void ResetAllData()
+public void ResetAllData()
     {
         try
         {
