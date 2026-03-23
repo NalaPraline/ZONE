@@ -367,7 +367,7 @@ public class DatabaseService : IDisposable
             foreach (var (name, file) in patches)
             {
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "UPDATE Performances SET LogoPath = @logo WHERE DjName = @name AND (LogoPath IS NULL OR LogoPath = '')";
+                cmd.CommandText = "UPDATE Performances SET LogoPath = @logo WHERE DjName = @name";
                 cmd.Parameters.AddWithValue("@logo", Path.Combine(logoDir, file));
                 cmd.Parameters.AddWithValue("@name", name);
                 cmd.ExecuteNonQuery();
