@@ -158,9 +158,10 @@ public class SettingsWindow : Window
         {
             config.ZoneVisionEnabled = overlay;
             Plugin.Db.SaveConfig(config);
+            Plugin.Overlay.IsOpen = overlay;
         }
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + indent);
-        ImGui.TextColored(CGrey, "Compact HUD widget — current DJ and mode status.");
+        ImGui.TextColored(CGrey, "Compact HUD widget showing current DJ and mode status.");
     }
 
     private static void DrawSectionHeader(string text)
