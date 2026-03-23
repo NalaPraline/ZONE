@@ -1,0 +1,9 @@
+.vs/
+obj/
+bin/
+*.user
+.idea/
+*.suo
+staff.json
+SamplePlugin/
+SamplePlugin.sln
