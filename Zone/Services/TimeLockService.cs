@@ -13,7 +13,7 @@ public sealed class TimeLockService : IDisposable
 
     private static readonly byte[] TimeOriginal      = [0x4D, 0x8B, 0x8A, 0x78, 0x17, 0x00, 0x00];
     private static readonly byte[] TimeReplacement   = [0x49, 0xC7, 0xC1, 0x00, 0x00, 0x00, 0x00];
-    private static readonly byte[] WeatherReplacement = [0xB2, 0x00, 0x90, 0x90];
+    private static readonly byte[] WeatherReplacement = [0xB2, 0x01, 0x90, 0x90];
 
     // Housing interior territory IDs — weather lock is unsafe inside houses
     private static readonly HashSet<ushort> HousingInteriorIds =
