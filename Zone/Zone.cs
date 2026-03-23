@@ -98,12 +98,6 @@ public sealed class Plugin : IDalamudPlugin
         var cfg = Db.GetConfig();
         if (cfg.ZoneVisionEnabled)
             _overlay.IsOpen = true;
-        // TimeLock always starts off regardless of saved state
-        if (cfg.TimeLockEnabled)
-        {
-            cfg.TimeLockEnabled = false;
-            Db.SaveConfig(cfg);
-        }
 
         Log.Information("[Zone] Plugin loaded.");
     }

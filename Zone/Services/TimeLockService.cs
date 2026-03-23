@@ -16,6 +16,8 @@ public sealed class TimeLockService : IDisposable
     private nint _timePatchAddr;
     private bool _timeApplied;
 
+    public bool IsEnabled => _timeApplied;
+
     public TimeLockService()
     {
         try

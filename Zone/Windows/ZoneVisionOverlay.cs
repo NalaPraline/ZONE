@@ -69,9 +69,8 @@ public class ZoneVisionOverlay : Window
         var dl   = ImGui.GetWindowDrawList();
         var wpos = ImGui.GetWindowPos();
 
-        var config = Plugin.Db.GetConfig();
-
-        var col = config.TimeLockEnabled ? BrRed : DkGrey;
+        bool timeLock = Plugin.TimeLock.IsEnabled;
+        var col = timeLock ? BrRed : DkGrey;
         float rowStartY = ImGui.GetCursorPosY();
 
         ImGui.TextColored(col, "ACTIVATE");
@@ -81,11 +80,7 @@ public class ZoneVisionOverlay : Window
         var bMax = ImGui.GetItemRectMax();
         ImGui.SetCursorScreenPos(bMin);
         if (ImGui.InvisibleButton("##toggle", bMax - bMin))
-        {
-            config.TimeLockEnabled = !config.TimeLockEnabled;
-            Plugin.Db.SaveConfig(config);
-            Plugin.TimeLock.SetEnabled(config.TimeLockEnabled);
-        }
+            Plugin.TimeLock.SetEnabled(!timeLock);
 
         // Logo via draw list so it doesn't affect layout
         var logoWrap = Plugin.TextureProvider.GetFromFile(new FileInfo(_logoPath)).GetWrapOrDefault();

@@ -725,13 +725,12 @@ public class MainWindow : Window, IDisposable
 
     private void DrawAmbianceTab()
     {
-        var   config = Plugin.Db.GetConfig();
         var   dl     = ImGui.GetWindowDrawList();
         var   origin = ImGui.GetCursorScreenPos();
         var   lp     = ImGui.GetCursorPos();
         float availW = ImGui.GetContentRegionAvail().X;
         float availH = ImGui.GetContentRegionAvail().Y;
-        bool  active = config.TimeLockEnabled;
+        bool  active = Plugin.TimeLock.IsEnabled;
 
         uint scanCol = WithAlpha(U(CRed), 0x07);
         for (float oy = 0; oy < availH; oy += 8f)
@@ -820,11 +819,7 @@ public class MainWindow : Window, IDisposable
 
         ImGui.SetCursorPos(new Vector2(toggleX, toggleY));
         if (DrawDayNightToggle(active, "##timeLock"))
-        {
-            config.TimeLockEnabled = !config.TimeLockEnabled;
-            Plugin.Db.SaveConfig(config);
-            Plugin.TimeLock.SetEnabled(config.TimeLockEnabled);
-        }
+            Plugin.TimeLock.SetEnabled(!active);
         ImGui.SameLine();
         ImGui.SetCursorPosY(toggleY + 11f);
         ImGui.TextColored(active ? CBrRed : CDkGrey, statusLabel);

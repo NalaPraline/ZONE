@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/14.0.2">
   <PropertyGroup>
     <AssemblyName>Zone</AssemblyName>
-    <Version>1.1.2.0</Version>
+    <Version>1.1.3.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="ECommons" Version="3.*" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.*" />
   </ItemGroup>
 
   <ItemGroup>
