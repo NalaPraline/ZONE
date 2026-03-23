@@ -817,22 +817,28 @@ public class MainWindow : Window, IDisposable
         float  toggleX     = lpx + (PW - rowW) * 0.5f;
         float  toggleY     = lpy + innerH * 0.38f - 20f;
 
+        bool inHousing = Plugin.TimeLock.IsHousingInterior;
+
         ImGui.SetCursorPos(new Vector2(toggleX, toggleY));
+        if (inHousing) ImGui.BeginDisabled();
         if (DrawDayNightToggle(active, "##timeLock"))
             Plugin.TimeLock.SetEnabled(!active);
+        if (inHousing) ImGui.EndDisabled();
         ImGui.SameLine();
         ImGui.SetCursorPosY(toggleY + 11f);
-        ImGui.TextColored(active ? CBrRed : CDkGrey, statusLabel);
+        ImGui.TextColored(inHousing || !active ? CDkGrey : CBrRed, statusLabel);
 
-        string desc   = active
-            ? "Eorzea time is locked to midnight."
-            : "Locks Eorzea time to midnight for the full club atmosphere.";
+        string desc = inHousing
+            ? "Unavailable inside housing interiors."
+            : active
+                ? "Eorzea time locked to midnight. Clear skies active."
+                : "Locks Eorzea time to midnight and clears the sky.";
         float  descW  = ImGui.CalcTextSize(desc).X;
         const float DM = 20f;
         float  descX  = lpx + MathF.Max((PW - descW) * 0.5f, DM);
         ImGui.PushTextWrapPos(lpx + PW - DM);
         ImGui.SetCursorPos(new Vector2(descX, toggleY + 46f));
-        ImGui.TextColored(CGrey, desc);
+        ImGui.TextColored(inHousing ? new Vector4(CGrey.X, CGrey.Y, CGrey.Z, 0.33f) : CGrey, desc);
         ImGui.PopTextWrapPos();
     }
 

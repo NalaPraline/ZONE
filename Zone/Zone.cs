@@ -26,6 +26,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ITargetManager         TargetManager    { get; private set; } = null!;
     [PluginService] internal static IDataManager           DataManager      { get; private set; } = null!;
     [PluginService] internal static IObjectTable           ObjectTable      { get; private set; } = null!;
+    [PluginService] internal static IClientState           ClientState      { get; private set; } = null!;
 
     internal static DatabaseService      Db            { get; private set; } = null!;
     internal static StaffApiService      StaffApi      { get; private set; } = null!;
@@ -84,7 +85,8 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi   += ToggleMain;
         PluginInterface.UiBuilder.OpenConfigUi += ToggleSettings;
 
-        Framework.Update += OnFrameworkUpdate;
+        Framework.Update            += OnFrameworkUpdate;
+        ClientState.TerritoryChanged += OnTerritoryChanged;
 
         CommandManager.AddHandler(CmdZone, new CommandInfo(OnZoneCommand)
         {
@@ -107,7 +109,8 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CmdZone);
         CommandManager.RemoveHandler(CmdZoneVision);
 
-        Framework.Update -= OnFrameworkUpdate;
+        Framework.Update             -= OnFrameworkUpdate;
+        ClientState.TerritoryChanged -= OnTerritoryChanged;
         PluginInterface.UiBuilder.Draw         -= _windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi   -= ToggleMain;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleSettings;
@@ -135,6 +138,8 @@ public sealed class Plugin : IDalamudPlugin
             _ = StaffApi.SyncStaffAsync();
         }
     }
+
+    private void OnTerritoryChanged(ushort id) => _timeLock.OnTerritoryChanged(id);
 
     private void OnZoneCommand(string cmd, string args) => ToggleMain();
 
