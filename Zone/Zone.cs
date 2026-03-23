@@ -29,6 +29,7 @@ public sealed class Plugin : IDalamudPlugin
 
     internal static DatabaseService      Db            { get; private set; } = null!;
     internal static StaffApiService      StaffApi      { get; private set; } = null!;
+    internal static ImageCacheService    ImageCache    { get; private set; } = null!;
     internal static TimeLockService      TimeLock      { get; private set; } = null!;
     internal static AnnouncementService  Announcements { get; private set; } = null!;
     internal static TwitchService        Twitch        { get; private set; } = null!;
@@ -54,15 +55,14 @@ public sealed class Plugin : IDalamudPlugin
 
         Db            = new DatabaseService();
         StaffApi      = new StaffApiService();
+        ImageCache    = new ImageCacheService();
         Announcements = new AnnouncementService();
         Twitch        = new TwitchService();
 
-        var logoDir    = Path.Combine(PluginInterface.AssemblyLocation.DirectoryName!, "Data", "djlogos");
-        var partnerDir = Path.Combine(PluginInterface.AssemblyLocation.DirectoryName!, "Data", "partners");
-        Db.SeedDay1IfEmpty(logoDir);
-        Db.SeedDay2IfEmpty(logoDir);
-        Db.PatchLogoPathsIfNeeded(logoDir);
-        Db.SeedPartnersIfEmpty(partnerDir);
+        Db.SeedDay1IfEmpty(ImageCache.DjLogosDir);
+        Db.SeedDay2IfEmpty(ImageCache.DjLogosDir);
+        Db.PatchLogoPathsIfNeeded(ImageCache.DjLogosDir);
+        Db.SeedPartnersIfEmpty(ImageCache.PartnersDir);
         Twitch.ResetIfNotEventDay();
 
         _timeLock      = new TimeLockService();
