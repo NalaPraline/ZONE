@@ -48,8 +48,8 @@ public class MainWindow : Window, IDisposable
     private const string LightlessPass     = "TODO";
     private const string RavaId            = "TODO";
     private const string RavaPass          = "TODO";
-    private const string PlayerSyncId      = "TODO";
-    private const string PlayerSyncPass    = "TODO";
+    private const string PlayerSyncId      = "ZonePsync";
+    private const string PlayerSyncPass    = "thezoneproject";
     // Lifestream: Shirogane=3, Ward 1, Plot 7
     private const int    TpWard  = 1;
     private const int    TpPlot  = 7;
@@ -435,7 +435,7 @@ public class MainWindow : Window, IDisposable
             DrawSectionHeader("PRESENTED BY");
             ImGui.Spacing();
 
-            const float logoH   = 52f;
+            const float logoH   = 72f;
             const float logoW   = 80f;
             const float logoGap = 16f;
             float       totalW  = presentedBy.Count * logoW + (presentedBy.Count - 1) * logoGap;
@@ -1127,10 +1127,9 @@ public class MainWindow : Window, IDisposable
             return;
         }
 
-        float cardW   = (ImGui.GetContentRegionAvail().X - 8f) / 2f;
-        const float cardH  = 88f;
-        const float imgSz  = 68f;
-        const float pad    = 10f;
+        float cardW = (ImGui.GetContentRegionAvail().X - 8f) / 2f;
+        const float cardH = 76f;
+        const float pad   = 14f;
 
         for (int i = 0; i < filtered.Count; i++)
         {
@@ -1140,78 +1139,77 @@ public class MainWindow : Window, IDisposable
             {
                 if (i % 2 != 0) ImGui.SameLine(cardW + 8f);
 
-                using var staffBg     = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.08f, 0.07f, 0.07f, 1f));
+                using var staffBg     = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.06f, 0.05f, 0.05f, 1f));
                 using var staffBorder = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
                 using (var card = ImRaii.Child($"staff{s.Id}", new Vector2(cardW, cardH), false))
                 {
-                    if (card)
+                    if (!card) continue;
+
+                    var   cdl     = ImGui.GetWindowDrawList();
+                    var   cp      = ImGui.GetWindowPos();
+                    var   csz     = ImGui.GetWindowSize();
+                    var   roleCol = ParseColor(s.Color) ?? CRed;
+                    bool  online  = s.IsOnlineDetected;
+
+                    // subtle gradient wash from role color on the left
+                    uint wash = WithAlpha(U(roleCol), online ? (byte)0x22 : (byte)0x0E);
+                    cdl.AddRectFilledMultiColor(
+                        cp, cp + csz,
+                        wash, 0x00000000,
+                        0x00000000, wash);
+
+                    // left accent bar
+                    cdl.AddRectFilled(cp, cp + new Vector2(3f, csz.Y),
+                        WithAlpha(U(roleCol), online ? (byte)0xFF : (byte)0x50));
+
+                    // border
+                    uint borderCol = online
+                        ? U(new Vector4(0f, 0.45f, 0.14f, 0.45f))
+                        : WithAlpha(U(roleCol), 0x28);
+                    cdl.AddRect(cp + Vector2.One, cp + csz - Vector2.One, borderCol, 3f);
+
+                    float lineH  = ImGui.GetTextLineHeightWithSpacing();
+                    float textX  = pad + 8f;
+                    float totalH = lineH * 2f;
+                    float nameY  = (cardH - totalH) * 0.5f;
+                    float subY   = nameY + lineH;
+
+                    // name · role on same line
+                    ImGui.SetCursorPos(new Vector2(textX, nameY));
+                    ImGui.TextColored(online ? CWhite : new Vector4(0.70f, 0.70f, 0.70f, 1f), s.CharacterName);
+                    ImGui.SameLine();
+                    ImGui.TextColored(new Vector4(roleCol.X, roleCol.Y, roleCol.Z, online ? 0.85f : 0.40f),
+                                      $"· {s.Role.ToUpperInvariant()}");
+
+                    // world below
+                    if (!string.IsNullOrWhiteSpace(s.World))
                     {
-                        var cdl = ImGui.GetWindowDrawList();
-                        var cp  = ImGui.GetWindowPos();
-                        var csz = ImGui.GetWindowSize();
+                        ImGui.SetCursorPos(new Vector2(textX, subY));
+                        ImGui.TextColored(new Vector4(0.30f, 0.30f, 0.30f, 1f), s.World);
+                    }
 
-                        if (s.IsOnlineDetected)
-                            cdl.AddRectFilled(cp, cp + new Vector2(3f, csz.Y), U(CGreen));
-
-                        uint borderCol = s.IsOnlineDetected
-                            ? U(new Vector4(0f, 0.45f, 0.12f, 0.55f))
-                            : U(new Vector4(0.20f, 0f, 0f, 0.70f));
-                        cdl.AddRect(cp + Vector2.One, cp + csz - Vector2.One, borderCol, 4f);
-
-                        float imgX = s.IsOnlineDetected ? pad + 3f : pad;
-                        float imgY = (cardH - imgSz) * 0.5f;
-                        ImGui.SetCursorPos(new Vector2(imgX, imgY));
-                        DrawTextureOrPlaceholder(s.AvatarPath, new Vector2(imgSz, imgSz));
-
-                        float textX  = imgX + imgSz + pad;
-                        var   roleCol = ParseColor(s.Color) ?? CRed;
-
-                        float lineH  = ImGui.GetTextLineHeightWithSpacing();
-                        float totalH = lineH * 2f + (s.IsOnlineDetected ? lineH : 0f);
-                        float textY  = (cardH - totalH) * 0.5f;
-
-                        ImGui.SetCursorPos(new Vector2(textX, textY));
-                        ImGui.TextColored(CWhite, s.CharacterName);
-
-                        ImGui.SetCursorPos(new Vector2(textX, textY + lineH));
-                        ImGui.TextColored(roleCol, s.Role.ToUpperInvariant());
-
-                        if (s.IsOnlineDetected)
-                        {
-                            ImGui.SetCursorPos(new Vector2(textX, textY + lineH * 2f));
-                            ImGui.TextColored(CGreen, "● Online");
-                        }
-
-                        const string btnLabel = "VIEW PROFILE";
+                    if (online)
+                    {
                         const string tgtLabel = "TARGET";
-                        float btnW = Math.Max(ImGui.CalcTextSize(btnLabel).X, ImGui.CalcTextSize(tgtLabel).X) + 14f;
+                        float btnW = ImGui.CalcTextSize(tgtLabel).X + 16f;
                         float btnH = ImGui.GetTextLineHeight() + 6f;
                         float btnX = csz.X - btnW - pad;
-                        const float btnGap = 4f;
-                        float totalBtnH = s.IsOnlineDetected ? btnH * 2 + btnGap : btnH;
-                        float btnY = (cardH - totalBtnH) * 0.5f;
+                        float btnY = (cardH - btnH) * 0.5f;
 
-                        using var frameRound = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 3f);
+                        // ● dot above button
+                        cdl.AddCircleFilled(
+                            new Vector2(cp.X + btnX + btnW * 0.5f, cp.Y + btnY - 8f),
+                            3f, U(CGreen));
 
+                        using var fr = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 3f);
                         ImGui.SetCursorPos(new Vector2(btnX, btnY));
+                        using var tc = ImRaii.PushColor(ImGuiCol.Button,        new Vector4(0f, 0.22f, 0.07f, 1f));
+                        using var th = ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0f, 0.45f, 0.16f, 1f));
+                        if (ImGui.Button(tgtLabel, new Vector2(btnW, btnH)))
                         {
-                            using var btnCol = ImRaii.PushColor(ImGuiCol.Button,        new Vector4(0.18f, 0f, 0f, 0.9f));
-                            using var btnHov = ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.55f, 0f, 0f, 1f));
-                            if (ImGui.Button(btnLabel, new Vector2(btnW, btnH)))
-                                _staffPopup.OpenFor(s);
-                        }
-
-                        if (s.IsOnlineDetected)
-                        {
-                            ImGui.SetCursorPos(new Vector2(btnX, btnY + btnH + btnGap));
-                            using var tgtCol = ImRaii.PushColor(ImGuiCol.Button,        new Vector4(0f, 0.25f, 0.08f, 0.9f));
-                            using var tgtHov = ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0f, 0.50f, 0.18f, 1f));
-                            if (ImGui.Button(tgtLabel, new Vector2(btnW, btnH)))
-                            {
-                                var obj = Plugin.ObjectTable.FirstOrDefault(
-                                    o => (int)o.ObjectKind == 1 && o.Name.TextValue == s.CharacterName);
-                                if (obj != null) Plugin.TargetManager.Target = obj;
-                            }
+                            var obj = Plugin.ObjectTable.FirstOrDefault(
+                                o => (int)o.ObjectKind == 1 && o.Name.TextValue == s.CharacterName);
+                            if (obj != null) Plugin.TargetManager.Target = obj;
                         }
                     }
                 }
