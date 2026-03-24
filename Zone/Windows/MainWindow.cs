@@ -44,10 +44,10 @@ public class MainWindow : Window, IDisposable
     private const string EventDescription = "ZONE is ultimately at its core a music festival. Designed to maintain its focus around music and celebrating that to bring together a wealth of talents in the community to participate in a celebration of music.";
     private const string EventWebsiteUrl   = "https://thezone.pro/";
     private const string EventMerchUrl     = "https://thezone.pro/vault";
-    private const string LightlessId       = "TODO";
-    private const string LightlessPass     = "TODO";
-    private const string RavaId            = "TODO";
-    private const string RavaPass          = "TODO";
+    private const string LightlessId       = "ZONE";
+    private const string LightlessPass     = "thezoneproject";
+    private const string RavaId            = "ZONERava";
+    private const string RavaPass          = "thezoneproject";
     private const string PlayerSyncId      = "ZonePsync";
     private const string PlayerSyncPass    = "thezoneproject";
     // Lifestream: Shirogane=3, Ward 1, Plot 7
