@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Lumina.Excel.Sheets;
 
 namespace Zone.Services;
 
@@ -15,17 +15,8 @@ public sealed class TimeLockService : IDisposable
     private static readonly byte[] TimeReplacement   = [0x49, 0xC7, 0xC1, 0x00, 0x00, 0x00, 0x00];
     private static readonly byte[] WeatherReplacement = [0xB2, 0x01, 0x90, 0x90];
 
-    // Housing interior territory IDs — weather lock is unsafe inside houses
-    private static readonly HashSet<ushort> HousingInteriorIds =
-    [
-        282, 283, 284,   // Mist
-        342, 343, 344,   // Lavender Beds
-        345, 346, 347,   // The Goblet
-        652, 653, 654,   // Shirogane
-        985, 986, 987,   // Empyreum
-        573, 574, 575,   // Apartments (standard wards)
-        976,             // Apartment (Empyreum)
-    ];
+    // TerritoryIntendedUse row ID for housing interiors in FFXIV game data
+    private const uint HousingIntendedUse = 14;
 
     private nint   _timePatchAddr;
     private nint   _weatherPatchAddr;
@@ -79,7 +70,9 @@ public sealed class TimeLockService : IDisposable
 
     public void OnTerritoryChanged(ushort territoryId)
     {
-        IsHousingInterior = HousingInteriorIds.Contains(territoryId);
+        var row = Plugin.DataManager.GetExcelSheet<TerritoryType>()?.GetRow(territoryId);
+        IsHousingInterior = row?.TerritoryIntendedUse.RowId == HousingIntendedUse;
+        Plugin.Log.Information($"[Zone] Territory changed: {territoryId}, housing={IsHousingInterior}");
         if (IsHousingInterior && _applied)
         {
             SetEnabled(false);
