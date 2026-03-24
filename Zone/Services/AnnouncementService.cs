@@ -94,10 +94,11 @@ public class AnnouncementService : IDisposable
             {
                 Plugin.Notifications.AddNotification(new Notification
                 {
-                    Content   = message,
-                    Title     = title,
-                    Type      = notifType,
-                    Minimized = false,
+                    Content             = message,
+                    Title               = title,
+                    Type                = notifType,
+                    Minimized           = false,
+                    InitialDuration     = TimeSpan.FromSeconds(12),
                 });
             });
         }
