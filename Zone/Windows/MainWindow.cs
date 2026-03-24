@@ -50,8 +50,8 @@ public class MainWindow : Window, IDisposable
     private const string RavaPass          = "TODO";
     private const string PlayerSyncId      = "TODO";
     private const string PlayerSyncPass    = "TODO";
-    // Lifestream: Shirogane=3, Ward 4, Plot 7
-    private const int    TpWard  = 4;
+    // Lifestream: Shirogane=3, Ward 1, Plot 7
+    private const int    TpWard  = 1;
     private const int    TpPlot  = 7;
 
     private static uint U(Vector4 v)              => ImGui.ColorConvertFloat4ToU32(v);
