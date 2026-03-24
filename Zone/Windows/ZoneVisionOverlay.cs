@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 
@@ -16,8 +17,9 @@ public class ZoneVisionOverlay : Window
     private static readonly Vector4 Grey   = new(0.50f, 0.50f, 0.50f, 1f);
     private static readonly Vector4 DkGrey = new(0.22f, 0.22f, 0.22f, 1f);
 
-    private const float W = 340f;
+    private const float W = 420f;
 
+    private ISharedImmediateTexture? _logoTexture;
     private readonly string _logoPath;
 
     public ZoneVisionOverlay()
@@ -33,7 +35,7 @@ public class ZoneVisionOverlay : Window
         IsOpen = false;
         RespectCloseHotkey = false;
         DisableFadeInFadeOut = true;
-        _logoPath = Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "Data", "ZONEVision.png");
+        _logoPath = Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "Data", "VISIONLogo.png");
     }
 
     public override void PreDraw()
@@ -70,20 +72,15 @@ public class ZoneVisionOverlay : Window
         var wpos = ImGui.GetWindowPos();
 
         bool timeLock = Plugin.TimeLock.IsEnabled;
-        var col = timeLock ? BrRed : DkGrey;
-        float rowStartY = ImGui.GetCursorPosY();
-
-        ImGui.TextColored(col, "ACTIVATE");
-        ImGui.TextColored(col, "ZONE MODE");
-
-        var bMin = ImGui.GetItemRectMin() - new Vector2(0f, ImGui.GetTextLineHeightWithSpacing());
-        var bMax = ImGui.GetItemRectMax();
-        ImGui.SetCursorScreenPos(bMin);
-        if (ImGui.InvisibleButton("##toggle", bMax - bMin))
+        if (DrawDayNightToggle(timeLock, "##toggleZM"))
             Plugin.TimeLock.SetEnabled(!timeLock);
+        ImGui.SameLine();
+        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 11f);
+        ImGui.TextColored(timeLock ? BrRed : White, timeLock ? "ZONE MODE ON" : "ZONE MODE OFF");
 
         // Logo via draw list so it doesn't affect layout
-        var logoWrap = Plugin.TextureProvider.GetFromFile(new FileInfo(_logoPath)).GetWrapOrDefault();
+        _logoTexture ??= Plugin.TextureProvider.GetFromFile(new FileInfo(_logoPath));
+        var logoWrap = _logoTexture.GetWrapOrDefault();
         if (logoWrap != null)
         {
             float logoH = 36f;
@@ -113,7 +110,7 @@ public class ZoneVisionOverlay : Window
         else
         {
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 6f);
-            ImGui.TextColored(DkGrey, "● NO LIVE DJ");
+            ImGui.TextColored(White, "● NO LIVE DJ");
         }
 
         ImGui.Separator();
@@ -149,13 +146,13 @@ public class ZoneVisionOverlay : Window
             else
             {
                 line    = $"< {targetName.ToUpperInvariant()} >";
-                lineCol = Grey;
+                lineCol = White;
             }
         }
         else
         {
             line    = "< TARGET >";
-            lineCol = DkGrey;
+            lineCol = White;
         }
 
         float tw = ImGui.CalcTextSize(line).X;
@@ -166,6 +163,53 @@ public class ZoneVisionOverlay : Window
         // Red left border (drawn after layout so height is known)
         var wheight = ImGui.GetWindowHeight();
         dl.AddLine(wpos, wpos + new Vector2(0f, wheight), ImGui.ColorConvertFloat4ToU32(Red), 2f);
+    }
+
+    private static uint U(Vector4 v) => ImGui.ColorConvertFloat4ToU32(v);
+
+    private static bool DrawDayNightToggle(bool enabled, string id)
+    {
+        var dl  = ImGui.GetWindowDrawList();
+        var pos = ImGui.GetCursorScreenPos();
+        const float W = 80f, H = 36f, R = H / 2f, KR = R - 3f;
+
+        ImGui.InvisibleButton(id, new Vector2(W, H));
+        bool clicked = ImGui.IsItemClicked();
+        bool hovered = ImGui.IsItemHovered();
+        float cy = pos.Y + H / 2f;
+
+        uint bg = enabled ? U(new Vector4(0.06f, 0.06f, 0.18f, 1f))
+                          : U(new Vector4(0.22f, 0.50f, 0.88f, 1f));
+        dl.AddRectFilled(pos, pos + new Vector2(W, H), bg, R);
+
+        if (enabled)
+        {
+            uint star = U(new Vector4(1f, 1f, 0.85f, 0.95f));
+            dl.AddCircleFilled(new Vector2(pos.X + 15f, pos.Y + 10f), 2.0f, star);
+            dl.AddCircleFilled(new Vector2(pos.X + 26f, pos.Y + 21f), 1.5f, star);
+            dl.AddCircleFilled(new Vector2(pos.X + 13f, pos.Y + 25f), 1.0f, star);
+        }
+        else
+        {
+            uint sun = U(new Vector4(1f, 0.88f, 0.15f, 1f));
+            dl.AddCircleFilled(new Vector2(pos.X + W - 23f, pos.Y + 12f), 7f, sun);
+            uint cloud = U(new Vector4(1f, 1f, 1f, 0.90f));
+            dl.AddCircleFilled(new Vector2(pos.X + W - 30f, pos.Y + 24f), 5.0f, cloud);
+            dl.AddCircleFilled(new Vector2(pos.X + W - 21f, pos.Y + 22f), 6.5f, cloud);
+            dl.AddCircleFilled(new Vector2(pos.X + W - 13f, pos.Y + 24f), 4.5f, cloud);
+            dl.AddRectFilled(new Vector2(pos.X + W - 35f, pos.Y + 24f),
+                             new Vector2(pos.X + W -  8f, pos.Y + 30f), cloud);
+        }
+
+        float knobX = enabled ? pos.X + W - R : pos.X + R;
+        dl.AddCircleFilled(new Vector2(knobX, cy), KR, 0xFFFFFFFF);
+        if (enabled)
+            dl.AddCircleFilled(new Vector2(knobX + 4f, cy - 3f), KR * 0.72f,
+                               U(new Vector4(0.06f, 0.06f, 0.18f, 1f)));
+
+        dl.AddRect(pos, pos + new Vector2(W, H),
+                   U(new Vector4(1f, 1f, 1f, hovered ? 0.35f : 0.10f)), R, ImDrawFlags.None, 1.5f);
+        return clicked;
     }
 
     private static unsafe ulong GetTargetContentId(nint address)

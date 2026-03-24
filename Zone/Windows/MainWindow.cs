@@ -30,7 +30,7 @@ public class MainWindow : Window, IDisposable
     private string _staffSearch = "";
 
 
-    private static readonly string[] TabNames = { "HOME", "AMBIANCE", "LINEUP", "ACTIVITIES", "STAFF", "PARTNERS" };
+    private static readonly string[] TabNames = { "HOME", "AMBIENCE", "LINEUP", "ACTIVITIES", "STAFF", "PARTNERS" };
 
     private readonly Dictionary<string, ISharedImmediateTexture> _texCache = new();
 
@@ -147,7 +147,7 @@ public class MainWindow : Window, IDisposable
                 switch (_activeTab)
                 {
                     case 0: DrawHomeTab(wsz.X);   break;
-                    case 1: DrawAmbianceTab();    break;
+                    case 1: DrawAmbienceTab();    break;
                     case 2: DrawLineupTab();      break;
                     case 3: DrawActivitiesTab();  break;
                     case 4: DrawStaffTab();        break;
@@ -165,7 +165,6 @@ public class MainWindow : Window, IDisposable
         var dl    = ImGui.GetWindowDrawList();
         float avail = ImGui.GetContentRegionAvail().X;
         const float H     = 46f;
-        const float fs    = 24f;
         const float btnSz = 22f;
         const float btnGap = 5f;
 
@@ -221,18 +220,21 @@ public class MainWindow : Window, IDisposable
         if (ImGui.IsItemActive() && ImGui.IsMouseDragging(ImGuiMouseButton.Left))
             ImGui.SetWindowPos(ImGui.GetWindowPos() + ImGui.GetIO().MouseDelta);
 
-        var   font  = ImGui.GetFont();
-        float scale = fs / ImGui.GetFontSize();
-        float w1    = ImGui.CalcTextSize("ZONE  ").X * scale;
-        float wV    = ImGui.CalcTextSize("V").X      * scale;
-        float wRest = ImGui.CalcTextSize("ISION").X  * scale;
-        float totalW = w1 + wV + wRest;
-        float tx = sp.X + (avail - totalW) * 0.5f;
-        float ty = sp.Y + (H - fs)         * 0.5f + 1f;
-
-        dl.AddText(font, fs, new Vector2(tx,           ty), 0xFFFFFFFF, "ZONE  ");
-        dl.AddText(font, fs, new Vector2(tx + w1,      ty), U(CRed),   "V");
-        dl.AddText(font, fs, new Vector2(tx + w1 + wV, ty), 0xFFFFFFFF, "ISION");
+        var titleLogoPath = Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "Data", "ZONEVisionLandscapeLogo.png");
+        if (!_texCache.TryGetValue(titleLogoPath, out var titleLogoShared))
+        {
+            titleLogoShared = Plugin.TextureProvider.GetFromFile(new FileInfo(titleLogoPath));
+            _texCache[titleLogoPath] = titleLogoShared;
+        }
+        var titleLogoWrap = titleLogoShared.GetWrapOrDefault();
+        if (titleLogoWrap != null)
+        {
+            float logoH = 30f;
+            float logoW = titleLogoWrap.Size.X / titleLogoWrap.Size.Y * logoH;
+            float logoX = sp.X + (avail - logoW) * 0.5f;
+            float logoY = sp.Y + (H - logoH) * 0.5f;
+            dl.AddImage(titleLogoWrap.Handle, new Vector2(logoX, logoY), new Vector2(logoX + logoW, logoY + logoH));
+        }
 
         dl.AddLine(new Vector2(sp.X, sp.Y + H), new Vector2(sp.X + avail, sp.Y + H),
                    U(CRed), 1.5f);
@@ -723,7 +725,7 @@ public class MainWindow : Window, IDisposable
         ImGui.TextColored(CDkGrey, $"{p.StartTime}  –  {p.EndTime}  ·  ST");
     }
 
-    private void DrawAmbianceTab()
+    private void DrawAmbienceTab()
     {
         var   dl     = ImGui.GetWindowDrawList();
         var   origin = ImGui.GetCursorScreenPos();
