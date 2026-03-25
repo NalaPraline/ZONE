@@ -20,9 +20,12 @@ public class TwitchService : IDisposable
         new(2026, 3, 28),
     };
 
+    private static DateTime EventDate(DateTime utc)
+        => utc.Hour < 6 ? utc.Date.AddDays(-1) : utc.Date;
+
     public void Update()
     {
-        if (!EventDates.Contains(DateTime.UtcNow.Date)) return;
+        if (!EventDates.Contains(EventDate(DateTime.UtcNow))) return;
         if ((DateTime.UtcNow - _lastCheck).TotalSeconds < CheckIntervalSeconds) return;
         _lastCheck = DateTime.UtcNow;
         _ = CheckAllAsync();
@@ -69,7 +72,7 @@ public class TwitchService : IDisposable
 
     public void ResetIfNotEventDay()
     {
-        if (!EventDates.Contains(DateTime.UtcNow.Date))
+        if (!EventDates.Contains(EventDate(DateTime.UtcNow)))
             Plugin.Db.SetLivePerformance(0);
     }
 

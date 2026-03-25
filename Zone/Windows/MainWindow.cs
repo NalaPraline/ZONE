@@ -323,13 +323,16 @@ public class MainWindow : Window, IDisposable
         var now    = DateTime.UtcNow;
         var day1   = new DateTime(2026, 3, 27);
         var day2   = new DateTime(2026, 3, 28);
-        int? evDay = now.Date == day1 ? 1 : now.Date == day2 ? 2 : (int?)null;
+        // Sets past midnight belong to the previous event day — shift back if before 6 AM
+        var eventDate = now.Hour < 6 ? now.Date.AddDays(-1) : now.Date;
+        int? evDay = eventDate == day1 ? 1 : eventDate == day2 ? 2 : (int?)null;
+
+        float availW = ImGui.GetContentRegionAvail().X;
 
         using var scroll = ImRaii.Child("HomeScroll", Vector2.Zero, false);
         if (!scroll) return;
 
-        var   dl     = ImGui.GetWindowDrawList();
-        float availW = ImGui.GetContentRegionAvail().X;
+        var dl = ImGui.GetWindowDrawList();
 
         {
             bool pre  = now.Date < day1;
@@ -396,6 +399,27 @@ public class MainWindow : Window, IDisposable
                 ImGui.SetCursorPos(afterBanner);
             }
 
+            {
+                bool zvOn  = Plugin.Overlay.IsOpen;
+                var  zvTxt = zvOn ? "ZONE VISION ON" : "ZONE VISION";
+                var  zvSz  = ImGui.CalcTextSize(zvTxt);
+                float zbW  = zvSz.X + 16f;
+                float zbH  = 20f;
+                float zbX  = sp.X + 12f;
+                float zbY  = sp.Y + (H - zbH) * 0.5f;
+                ImGui.SetCursorScreenPos(new Vector2(zbX, zbY));
+                ImGui.InvisibleButton("##homeZV", new Vector2(zbW, zbH));
+                bool zhov  = ImGui.IsItemHovered();
+                var  zbmin = ImGui.GetItemRectMin();
+                var  zbmax = ImGui.GetItemRectMax();
+                var  zbctr = (zbmin + zbmax) * 0.5f;
+                if (zhov || zvOn) dl.AddRectFilled(zbmin, zbmax, WithAlpha(U(CRed), zvOn ? (byte)0x40 : (byte)0x28), 2f);
+                dl.AddRect(zbmin, zbmax, zhov ? U(CBrRed) : (zvOn ? U(CRed) : WithAlpha(U(CRed), 0x66)), 2f, ImDrawFlags.None, 1f);
+                dl.AddText(zbctr - zvSz * 0.5f, zhov || zvOn ? U(CWhite) : U(CGrey), zvTxt);
+                if (ImGui.IsItemClicked()) Plugin.Overlay.IsOpen = !Plugin.Overlay.IsOpen;
+                ImGui.SetCursorPos(afterBanner);
+            }
+
             if (isEv)
             {
                 float blink = (float)(Math.Sin(ImGui.GetTime() * 3.0) * 0.35 + 0.65);
@@ -408,147 +432,105 @@ public class MainWindow : Window, IDisposable
 
         ImGui.Spacing();
 
-        var live = _performances.Find(p => p.IsLive);
-
-        Performance? nextDj;
-        if (evDay.HasValue)
-        {
-            var perfsToday = _performances
-                .FindAll(p => p.Day == evDay.Value)
-                .OrderBy(p => EventMinutes(p.StartTime))
-                .ToList();
-
-            if (live != null)
-                nextDj = perfsToday.FirstOrDefault(p => !p.IsLive && EventMinutes(p.StartTime) > EventMinutes(live.StartTime));
-            else
-            {
-                int nowMin = (int)now.TimeOfDay.TotalMinutes;
-                if (nowMin < 360) nowMin += 1440;
-                nextDj = perfsToday.FirstOrDefault(p => EventMinutes(p.StartTime) > nowMin);
-            }
-        }
-        else
-        {
-            nextDj = _performances
-                .FindAll(p => p.Day == 1)
-                .OrderBy(p => EventMinutes(p.StartTime))
-                .FirstOrDefault();
-        }
-
-        if (live != null)
-        {
-            DrawSectionHeader("NOW PLAYING");
-            ImGui.Spacing();
-            DrawLiveNowCard(live);
-            ImGui.Spacing();
-        }
-
-        if (nextDj != null)
-        {
-            DrawSectionHeader("UP NEXT");
-            ImGui.Spacing();
-            DrawHomeNextDjCard(nextDj);
-            ImGui.Spacing();
-        }
-
-        DrawHomeSyncSection();
-        ImGui.Spacing();
-
         {
             const float btnH = 42f;
             const float gap  = 8f;
             float btnW = (availW - gap * 2f) / 3f;
             var   lp   = ImGui.GetCursorPos();
 
-            if (DrawHudButton("##tpBtn",    "TELEPORT TO EVENT", new Vector2(lp.X,                     lp.Y), new Vector2(btnW, btnH), primary: true))
-                TeleportToEvent();
-            if (DrawHudButton("##webBtn",   "WEBSITE",           new Vector2(lp.X + btnW + gap,         lp.Y), new Vector2(btnW, btnH), primary: false))
+            if (DrawHudButton("##webBtn",   "WEBSITE",           new Vector2(lp.X,                     lp.Y), new Vector2(btnW, btnH), primary: false))
                 Dalamud.Utility.Util.OpenLink(EventWebsiteUrl);
+            if (DrawHudButton("##tpBtn",    "TELEPORT TO EVENT", new Vector2(lp.X + btnW + gap,         lp.Y), new Vector2(btnW, btnH), primary: true))
+                TeleportToEvent();
             if (DrawHudButton("##merchBtn", "DOWNLOAD MERCH",    new Vector2(lp.X + (btnW + gap) * 2f,  lp.Y), new Vector2(btnW, btnH), primary: false))
                 Dalamud.Utility.Util.OpenLink(EventMerchUrl);
 
+            ImGui.SetCursorPos(lp);
             ImGui.Dummy(new Vector2(availW, btnH));
         }
 
         ImGui.Spacing();
+        DrawHomeSyncSection();
+        ImGui.Spacing();
+
+        // Only consider a DJ live during actual event days
+        var live = evDay.HasValue ? _performances.Find(p => p.IsLive) : null;
+
+        {
+            // NOW PLAYING title with lines
+            var   npTxt  = "NOW PLAYING";
+            var   npSz   = ImGui.CalcTextSize(npTxt);
+            var   npSp   = ImGui.GetCursorScreenPos();
+            float npX    = npSp.X + (availW - npSz.X) * 0.5f;
+            float npLineY = npSp.Y + npSz.Y * 0.5f;
+            dl.AddLine(new Vector2(npSp.X, npLineY),            new Vector2(npX - 10f, npLineY),           U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+            dl.AddLine(new Vector2(npX + npSz.X + 10f, npLineY), new Vector2(npSp.X + availW, npLineY),    U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+            dl.AddText(new Vector2(npX, npSp.Y), U(new Vector4(0.35f, 0.35f, 0.35f, 1f)), npTxt);
+            ImGui.Dummy(new Vector2(availW, npSz.Y + 6f));
+
+            if (live != null)
+            {
+                DrawLiveNowCard(live);
+                ImGui.Spacing();
+            }
+            else
+            {
+                var   noLiveSp  = ImGui.GetCursorScreenPos();
+                var   startNL   = ImGui.GetCursorPos();
+                const float NLH = 46f;
+                const string noLiveTxt = "NO DJ CURRENTLY LIVE";
+                dl.AddRectFilled(noLiveSp, noLiveSp + new Vector2(availW, NLH), U(new Vector4(0.04f, 0.01f, 0.01f, 1f)), 3f);
+                DrawHudRect(dl, noLiveSp, noLiveSp + new Vector2(availW, NLH), 3f, U(new Vector4(0.22f, 0.02f, 0.02f, 0.7f)), 1f);
+                var   nlSz = ImGui.CalcTextSize(noLiveTxt);
+                dl.AddText(noLiveSp + new Vector2((availW - nlSz.X) * 0.5f, (NLH - nlSz.Y) * 0.5f),
+                           U(new Vector4(0.30f, 0.30f, 0.30f, 1f)), noLiveTxt);
+                ImGui.SetCursorPos(startNL);
+                ImGui.Dummy(new Vector2(availW, NLH));
+                ImGui.Spacing();
+            }
+        }
 
         var presentedBy = _partners.FindAll(p =>
             p.Name is "ENVY" or "Urban" or "Phoenix Nights" or "Project XIV" or "Nocturn");
 
-        if (presentedBy.Count > 0)
-        {
-            DrawSectionHeader("PRESENTED BY");
-            ImGui.Spacing();
-
-            const float logoH   = 72f;
-            const float logoW   = 80f;
-            const float logoGap = 16f;
-            float       totalW  = presentedBy.Count * logoW + (presentedBy.Count - 1) * logoGap;
-            float       startX  = ImGui.GetCursorScreenPos().X + (availW - totalW) * 0.5f;
-            var         baseY   = ImGui.GetCursorScreenPos().Y;
-
-            for (int i = 0; i < presentedBy.Count; i++)
-            {
-                var   p  = presentedBy[i];
-                float x  = startX + i * (logoW + logoGap);
-
-                if (!string.IsNullOrWhiteSpace(p.LogoPath) && File.Exists(p.LogoPath))
-                {
-                    if (!_texCache.TryGetValue(p.LogoPath, out var shared))
-                    {
-                        shared = Plugin.TextureProvider.GetFromFile(new FileInfo(p.LogoPath));
-                        _texCache[p.LogoPath] = shared;
-                    }
-                    var wrap = shared.GetWrapOrDefault();
-                    if (wrap != null)
-                    {
-                        float ratio = wrap.Size.X / wrap.Size.Y;
-                        float iw    = MathF.Min(logoW, logoH * ratio);
-                        float ih    = iw / ratio;
-                        float ix    = x + (logoW - iw) * 0.5f;
-                        float iy    = baseY + (logoH - ih) * 0.5f;
-                        dl.AddImage(wrap.Handle, new Vector2(ix, iy), new Vector2(ix + iw, iy + ih),
-                                    Vector2.Zero, Vector2.One, 0xCCFFFFFF);
-                    }
-                }
-            }
-
-            ImGui.Dummy(new Vector2(availW, logoH));
-            ImGui.Spacing();
-
-            float btnW2 = ImGui.CalcTextSize("IN COLLABORATION WITH OUR PARTNERS").X + 32f;
-            var   lp2   = ImGui.GetCursorPos();
-            if (DrawHudButton("##partnerBtn", "IN COLLABORATION WITH OUR PARTNERS",
-                              new Vector2(lp2.X + (availW - btnW2) * 0.5f, lp2.Y),
-                              new Vector2(btnW2, 34f), primary: false))
-                _activeTab = 5;
-            ImGui.Dummy(new Vector2(availW, 34f));
-            ImGui.Spacing();
-        }
 
         {
             int qDay      = evDay ?? (now.Date < day1 ? 1 : 2);
             var actsToday = _activities.FindAll(a => a.Day == qDay);
-            actsToday.Sort((a, b) => string.Compare(a.StartTime, b.StartTime, StringComparison.Ordinal));
 
-            DrawSectionHeader("ACTIVITIES");
-            ImGui.Spacing();
+            // ACTIVITIES title with lines (same style as NOW PLAYING)
+            var   acTxt   = "ACTIVITIES";
+            var   acSz    = ImGui.CalcTextSize(acTxt);
+            var   acSp    = ImGui.GetCursorScreenPos();
+            float acX     = acSp.X + (availW - acSz.X) * 0.5f;
+            float acLineY = acSp.Y + acSz.Y * 0.5f;
+            dl.AddLine(new Vector2(acSp.X, acLineY),              new Vector2(acX - 10f, acLineY),           U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+            dl.AddLine(new Vector2(acX + acSz.X + 10f, acLineY),  new Vector2(acSp.X + availW, acLineY),    U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+            dl.AddText(new Vector2(acX, acSp.Y), U(new Vector4(0.35f, 0.35f, 0.35f, 1f)), acTxt);
+            ImGui.Dummy(new Vector2(availW, acSz.Y + 6f));
 
-            if (actsToday.Count == 0)
+            int  nowMin = EventMinutes(now.ToString("HH:mm"));
+            var  active = evDay.HasValue
+                ? actsToday.FindAll(a => IsActivityActive(a.StartTime, nowMin))
+                : new List<Zone.Models.Activity>();
+
+            if (active.Count == 0)
             {
-                var sp = ImGui.GetCursorScreenPos();
-                const float H = 52f;
-                dl.AddRectFilled(sp, sp + new Vector2(availW, H), U(new Vector4(0.05f, 0.02f, 0.02f, 1f)), 4f);
-                DrawHudRect(dl, sp + Vector2.One, sp + new Vector2(availW, H) - Vector2.One,
-                            6f, U(new Vector4(0.22f, 0f, 0f, 0.6f)), 1f);
-                const string msg = "NO ACTIVITIES SCHEDULED AT THIS TIME";
-                var ts = ImGui.CalcTextSize(msg);
-                dl.AddText(new Vector2(sp.X + (availW - ts.X) * 0.5f, sp.Y + (H - ts.Y) * 0.5f), U(CDkGrey), msg);
-                ImGui.Dummy(new Vector2(availW, H));
+                var   noActSp  = ImGui.GetCursorScreenPos();
+                var   startNA  = ImGui.GetCursorPos();
+                const float NAH = 46f;
+                const string noActTxt = "NO ACTIVITY IN PROGRESS";
+                dl.AddRectFilled(noActSp, noActSp + new Vector2(availW, NAH), U(new Vector4(0.04f, 0.01f, 0.01f, 1f)), 3f);
+                DrawHudRect(dl, noActSp, noActSp + new Vector2(availW, NAH), 3f, U(new Vector4(0.22f, 0.02f, 0.02f, 0.7f)), 1f);
+                var naSz = ImGui.CalcTextSize(noActTxt);
+                dl.AddText(noActSp + new Vector2((availW - naSz.X) * 0.5f, (NAH - naSz.Y) * 0.5f),
+                           U(new Vector4(0.30f, 0.30f, 0.30f, 1f)), noActTxt);
+                ImGui.SetCursorPos(startNA);
+                ImGui.Dummy(new Vector2(availW, NAH));
             }
             else
             {
-                foreach (var act in actsToday)
+                foreach (var act in active)
                 {
                     using var bg   = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.05f, 0.02f, 0.02f, 1f));
                     using var bsz  = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
@@ -619,65 +601,92 @@ public class MainWindow : Window, IDisposable
 
     private static void DrawHomeSyncSection()
     {
-        DrawSectionHeader("SYNCSHELL");
-        ImGui.Spacing();
-
         float availW = ImGui.GetContentRegionAvail().X;
-        const float gap   = 8f;
-        const float cardH = 88f;
-        float cardW = MathF.Floor((availW - gap * 2f) / 3f);
 
-        DrawSyncCard("LIGHTLESS SYNCSHELL", LightlessId, LightlessPass, "syncLS", cardW, cardH);
-        ImGui.SameLine(0, gap);
-        DrawSyncCard("RAVA SYNCSHELL",      RavaId,      RavaPass,      "syncRV", cardW, cardH);
-        ImGui.SameLine(0, gap);
-        DrawSyncCard("PLAYERSYNC",          PlayerSyncId, PlayerSyncPass, "syncPS", cardW, cardH);
-    }
+        // Centered "SYNCSHELL" title
+        var   titleTxt = "SYNCSHELL";
+        var   titleSz  = ImGui.CalcTextSize(titleTxt);
+        var   titleSp  = ImGui.GetCursorScreenPos();
+        var   dl0      = ImGui.GetWindowDrawList();
+        float titleX   = titleSp.X + (availW - titleSz.X) * 0.5f;
+        // Subtle lines on each side of the title
+        float lineY = titleSp.Y + titleSz.Y * 0.5f;
+        float lineGap = 10f;
+        dl0.AddLine(new Vector2(titleSp.X, lineY),          new Vector2(titleX - lineGap, lineY),              U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+        dl0.AddLine(new Vector2(titleX + titleSz.X + lineGap, lineY), new Vector2(titleSp.X + availW, lineY),  U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+        dl0.AddText(new Vector2(titleX, titleSp.Y), U(new Vector4(0.35f, 0.35f, 0.35f, 1f)), titleTxt);
+        ImGui.Dummy(new Vector2(availW, titleSz.Y + 6f));
 
-    private static void DrawSyncCard(string label, string id, string pass, string uid,
-                                      float cardW, float cardH)
-    {
-        using var bg     = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.06f, 0.05f, 0.05f, 1f));
-        using var border = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
-        using var card   = ImRaii.Child(uid, new Vector2(cardW, cardH), false);
-        if (!card) return;
+        var   startPos = ImGui.GetCursorPos();
+        var   sp       = ImGui.GetCursorScreenPos();
+        const float H      = 62f;
+        const float btnW   = 88f;
+        const float btnH   = 20f;
+        const float btnGap = 4f;
+        float sectionW = availW / 3f;
 
-        var cpos = ImGui.GetWindowPos();
-        var csz  = ImGui.GetWindowSize();
-        var cdl  = ImGui.GetWindowDrawList();
+        var dl = ImGui.GetWindowDrawList();
 
-        const float hdrH = 26f;
-        cdl.AddRectFilled(cpos, cpos + new Vector2(csz.X, hdrH),
-                          U(new Vector4(0.10f, 0.02f, 0.02f, 1f)));
-        cdl.AddLine(cpos + new Vector2(0, hdrH), cpos + new Vector2(csz.X, hdrH),
-                    U(new Vector4(0.38f, 0f, 0f, 0.9f)), 1f);
+        // Unified background
+        dl.AddRectFilled(sp, sp + new Vector2(availW, H), U(new Vector4(0.05f, 0.02f, 0.02f, 1f)), 3f);
+        DrawHudRect(dl, sp, sp + new Vector2(availW, H), 3f, U(new Vector4(0.28f, 0.03f, 0.03f, 0.9f)), 1f);
 
-        var   lblSz = ImGui.CalcTextSize(label);
-        float lblX  = (csz.X - lblSz.X) * 0.5f;
-        float lblY  = (hdrH  - lblSz.Y) * 0.5f;
-        cdl.AddText(cpos + new Vector2(lblX, lblY), U(CWhite), label);
+        // Vertical dividers
+        for (int i = 1; i < 3; i++)
+            dl.AddLine(sp + new Vector2(sectionW * i, 10f), sp + new Vector2(sectionW * i, H - 10f),
+                       U(new Vector4(0.30f, 0.03f, 0.03f, 0.8f)), 1f);
 
-        float lineH = ImGui.GetTextLineHeightWithSpacing();
-        float idY   = hdrH + (cardH - hdrH - lineH - 28f) * 0.5f;
+        var syncs = new (string name, string id, string pass, string uid)[]
+        {
+            ("LIGHTLESS", LightlessId,  LightlessPass,  "sLS"),
+            ("RAVA",      RavaId,       RavaPass,        "sRV"),
+            ("PLAYERSYNC",PlayerSyncId, PlayerSyncPass,  "sPS"),
+        };
 
-        ImGui.SetCursorPos(new Vector2(10f, idY));
-        ImGui.TextColored(CDkGrey, "ID:");
-        ImGui.SameLine(0, 5);
-        ImGui.TextColored(CGrey, id);
+        float lh = ImGui.GetTextLineHeight();
 
-        const float btnH  = 22f;
-        const float margin = 8f;
-        float btnY  = cardH - btnH - margin;
-        float halfW = (csz.X - margin * 2f - 4f) * 0.5f;
+        for (int i = 0; i < syncs.Length; i++)
+        {
+            var (name, id, pass, uid) = syncs[i];
+            float secX = sp.X + sectionW * i;
+            float textX = secX + 12f;
 
-        if (DrawHudButton($"##ci{uid}", "COPY ID",   new Vector2(margin,              btnY), new Vector2(halfW, btnH), primary: false))
-            ImGui.SetClipboardText(id);
+            // Name label
+            dl.AddText(new Vector2(textX, sp.Y + 10f),
+                       U(new Vector4(0.38f, 0.38f, 0.38f, 1f)), name);
 
-        if (DrawHudButton($"##cp{uid}", "COPY PASS", new Vector2(margin + halfW + 4f, btnY), new Vector2(halfW, btnH), primary: false))
-            ImGui.SetClipboardText(pass);
+            // ID value
+            dl.AddText(new Vector2(textX, sp.Y + 10f + lh + 2f),
+                       U(new Vector4(0.65f, 0.65f, 0.65f, 1f)), id);
 
-        DrawHudRect(cdl, cpos + Vector2.One, cpos + csz - Vector2.One,
-                    5f, U(new Vector4(0.25f, 0f, 0f, 0.7f)), 1f);
+            // Buttons on the right side of each section
+            float bx = secX + sectionW - btnW - 10f;
+            float by1 = sp.Y + (H * 0.5f) - btnH - btnGap * 0.5f;
+            float by2 = by1 + btnH + btnGap;
+
+            ImGui.SetCursorScreenPos(new Vector2(bx, by1));
+            ImGui.InvisibleButton($"##ci{uid}", new Vector2(btnW, btnH));
+            bool hovCI = ImGui.IsItemHovered();
+            var ciMin = ImGui.GetItemRectMin(); var ciMax = ImGui.GetItemRectMax();
+            dl.AddRectFilled(ciMin, ciMax, hovCI ? U(new Vector4(0.20f, 0.03f, 0.03f, 1f)) : U(new Vector4(0.09f, 0.02f, 0.02f, 1f)), 2f);
+            dl.AddRect(ciMin, ciMax, hovCI ? U(CBrRed) : U(new Vector4(0.35f, 0.04f, 0.04f, 0.9f)), 2f, ImDrawFlags.None, 1f);
+            var ciTxt = ImGui.CalcTextSize("COPY ID");
+            dl.AddText((ciMin + ciMax) * 0.5f - ciTxt * 0.5f, hovCI ? 0xFFFFFFFF : U(CGrey), "COPY ID");
+            if (ImGui.IsItemClicked()) ImGui.SetClipboardText(id);
+
+            ImGui.SetCursorScreenPos(new Vector2(bx, by2));
+            ImGui.InvisibleButton($"##cp{uid}", new Vector2(btnW, btnH));
+            bool hovCP = ImGui.IsItemHovered();
+            var cpMin = ImGui.GetItemRectMin(); var cpMax = ImGui.GetItemRectMax();
+            dl.AddRectFilled(cpMin, cpMax, hovCP ? U(new Vector4(0.20f, 0.03f, 0.03f, 1f)) : U(new Vector4(0.09f, 0.02f, 0.02f, 1f)), 2f);
+            dl.AddRect(cpMin, cpMax, hovCP ? U(CBrRed) : U(new Vector4(0.35f, 0.04f, 0.04f, 0.9f)), 2f, ImDrawFlags.None, 1f);
+            var cpTxt = ImGui.CalcTextSize("COPY PASS");
+            dl.AddText((cpMin + cpMax) * 0.5f - cpTxt * 0.5f, hovCP ? 0xFFFFFFFF : U(CGrey), "COPY PASS");
+            if (ImGui.IsItemClicked()) ImGui.SetClipboardText(pass);
+        }
+
+        ImGui.SetCursorPos(startPos);
+        ImGui.Dummy(new Vector2(availW, H));
     }
 
     private static bool DrawHudButton(string id, string label, Vector2 localPos, Vector2 size, bool primary)
@@ -697,16 +706,36 @@ public class MainWindow : Window, IDisposable
 
         dl.AddRectFilled(min, max, fill, 3f);
 
-        DrawHudRect(dl, min, max, 4f,
-            primary ? U(hovered ? CBrRed : new Vector4(0.55f, 0f, 0f, 1f))
-                    : U(new Vector4(0.28f, 0.04f, 0.04f, 0.8f)),
-            1f, glow: hovered && primary);
+        // Elegant static red border — brighter on primary, subtle on secondary
+        uint borderCol = primary
+            ? (hovered ? U(CBrRed) : U(new Vector4(0.70f, 0.05f, 0.05f, 1f)))
+            : (hovered ? U(new Vector4(0.60f, 0.08f, 0.08f, 1f)) : U(new Vector4(0.38f, 0.04f, 0.04f, 0.9f)));
+        dl.AddRect(min, max, borderCol, 3f, ImDrawFlags.None, primary ? 1.5f : 1f);
 
-        var   textSz = ImGui.CalcTextSize(label);
-        var   center = (min + max) * 0.5f;
+        // Corner accents — small L-shapes at each corner for a HUD feel
+        const float ca = 8f;
+        uint accentCol = primary
+            ? (hovered ? U(CWhite) : U(new Vector4(0.90f, 0.15f, 0.15f, 1f)))
+            : (hovered ? U(new Vector4(0.80f, 0.20f, 0.20f, 1f)) : U(new Vector4(0.55f, 0.08f, 0.08f, 0.9f)));
+        float aw = primary ? 1.8f : 1.4f;
+        // top-left
+        dl.AddLine(min,                              min + new Vector2(ca, 0),  accentCol, aw);
+        dl.AddLine(min,                              min + new Vector2(0,  ca), accentCol, aw);
+        // top-right
+        dl.AddLine(new Vector2(max.X, min.Y),        new Vector2(max.X - ca, min.Y), accentCol, aw);
+        dl.AddLine(new Vector2(max.X, min.Y),        new Vector2(max.X, min.Y + ca), accentCol, aw);
+        // bottom-left
+        dl.AddLine(new Vector2(min.X, max.Y),        new Vector2(min.X + ca, max.Y), accentCol, aw);
+        dl.AddLine(new Vector2(min.X, max.Y),        new Vector2(min.X, max.Y - ca), accentCol, aw);
+        // bottom-right
+        dl.AddLine(max,                              max - new Vector2(ca, 0),  accentCol, aw);
+        dl.AddLine(max,                              max - new Vector2(0,  ca), accentCol, aw);
+
+        var   textSz  = ImGui.CalcTextSize(label);
+        var   center  = (min + max) * 0.5f;
         uint  textCol = hovered    ? 0xFFFFFFFF
-                      : primary    ? U(new Vector4(0.88f, 0.88f, 0.88f, 1f))
-                      :              U(new Vector4(0.50f, 0.50f, 0.50f, 1f));
+                      : primary    ? U(new Vector4(0.92f, 0.92f, 0.92f, 1f))
+                      :              U(new Vector4(0.55f, 0.55f, 0.55f, 1f));
         dl.AddText(center - textSz * 0.5f, textCol, label);
 
         return clicked;
@@ -765,7 +794,7 @@ public class MainWindow : Window, IDisposable
         ImGui.SetCursorPos(new Vector2(textX, textY));
         ImGui.TextColored(CWhite, p.DjName.ToUpperInvariant());
         ImGui.SetCursorPos(new Vector2(textX, textY + lh));
-        ImGui.TextColored(CDkGrey, $"{p.StartTime}  –  {p.EndTime}  ·  ST");
+        ImGui.TextColored(CDkGrey, $"{p.StartTime} - {p.EndTime}  ·  ST");
     }
 
     private void DrawAmbienceTab()
@@ -954,7 +983,7 @@ public class MainWindow : Window, IDisposable
                         ImGui.TextColored(CWhite, p.DjName.ToUpperInvariant());
 
                         ImGui.SetCursorPos(new Vector2(textX, textStartY + lineH));
-                        ImGui.TextColored(CDkGrey, $"{p.StartTime}  –  {p.EndTime}  ·  ST");
+                        ImGui.TextColored(CDkGrey, $"{p.StartTime} - {p.EndTime}  ·  ST");
 
                         if (p.IsLive)
                         {
@@ -1019,7 +1048,7 @@ public class MainWindow : Window, IDisposable
         ImGui.TextColored(CWhite, live.DjName.ToUpperInvariant());
 
         ImGui.SetCursorPos(new Vector2(htextX, textStartY + lineH * 2f));
-        ImGui.TextColored(CDkGrey, $"{live.StartTime}  –  {live.EndTime}  ·  ST");
+        ImGui.TextColored(CDkGrey, $"{live.StartTime} - {live.EndTime}  ·  ST");
 
         if (!string.IsNullOrWhiteSpace(live.StreamUrl))
         {
@@ -1057,13 +1086,13 @@ public class MainWindow : Window, IDisposable
             ImGui.PushID(act.Id);
             try
             {
-                bool isNow = false, isPast = false;
-                if (TimeSpan.TryParse(act.StartTime.Split('-')[0].Trim(), out var aStart))
-                {
-                    var dur = TimeSpan.FromHours(2);
-                    isNow  = aStart <= now && now <= aStart + dur;
-                    isPast = now > aStart + dur;
-                }
+                int  nowMinAct = EventMinutes(now.Hours.ToString("D2") + ":" + now.Minutes.ToString("D2"));
+                bool isNow     = IsActivityActive(act.StartTime, nowMinAct);
+                bool isPast    = false;
+                var  parts     = act.StartTime.Split(" - ", StringSplitOptions.TrimEntries);
+                if (parts.Length > 1) isPast = nowMinAct >= EventMinutes(parts[1]);
+                else if (TimeSpan.TryParse(parts[0], out var aStart))
+                    isPast = now > aStart + TimeSpan.FromHours(2);
 
                 using var actAlpha = ImRaii.PushStyle(ImGuiStyleVar.Alpha, 0.38f, isPast);
                 using var actBg    = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.06f, 0.04f, 0.04f, 1f));
@@ -1080,15 +1109,15 @@ public class MainWindow : Window, IDisposable
                     // background wash + accent bar + border
                     uint redWash = WithAlpha(U(CRed), isNow ? (byte)0x1A : (byte)0x0C);
                     cdl.AddRectFilledMultiColor(cp, cp + csz, redWash, 0x00000000, 0x00000000, redWash);
-                    cdl.AddRectFilled(cp, cp + new Vector2(accentW, csz.Y), isNow ? U(CRed) : U(CDkGrey));
+                    cdl.AddRectFilled(cp, cp + new Vector2(accentW, csz.Y), isNow ? U(CGreen) : U(CDkGrey));
                     cdl.AddRect(cp + Vector2.One, cp + csz - Vector2.One,
-                                isNow ? WithAlpha(U(CRed), 0x55) : WithAlpha(U(CDkGrey), 0x28), 3f);
+                                isNow ? WithAlpha(U(CGreen), 0x55) : WithAlpha(U(CDkGrey), 0x28), 3f);
 
                     // time — vertically centred in left column
                     var timeStr = act.StartTime + " ST";
                     var timeSz  = ImGui.CalcTextSize(timeStr);
                     ImGui.SetCursorPos(new Vector2(accentW + pad, (cardH - timeSz.Y) * 0.5f));
-                    ImGui.TextColored(isNow ? CBrRed : CWhite, timeStr);
+                    ImGui.TextColored(isNow ? CGreen : CWhite, timeStr);
 
                     // separator
                     float sepX = cp.X + accentW + pad + timeColW;
@@ -1516,6 +1545,14 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    private static bool IsActivityActive(string startTime, int nowMin)
+    {
+        var parts  = startTime.Split(" - ", StringSplitOptions.TrimEntries);
+        int startM = EventMinutes(parts[0]);
+        int endM   = parts.Length > 1 ? EventMinutes(parts[1]) : startM + 120;
+        return nowMin >= startM && nowMin < endM;
+    }
+
     // Treats times before noon as next-day so midnight sets sort after late evening
     private static int EventMinutes(string t)
     {
@@ -1527,17 +1564,18 @@ public class MainWindow : Window, IDisposable
     private static int RoleOrder(string role) => role switch
     {
         "Venue Owner"          => 0,
-        "Bar Manager"          => 1,
-        "Gamba Manager"        => 1,
-        "Casino Manager"       => 1,
-        "Photography Manager"  => 1,
-        "Dance Manager"        => 1,
-        "Hype Manager"         => 1,
-        "Management Support"   => 1,
-        "Community Leader"     => 1,
-        "Photographer"         => 2,
-        "Bartender"            => 3,
-        _                      => 4,
+        "Global Manager"       => 1,
+        "Bar Manager"          => 2,
+        "Gamba Manager"        => 2,
+        "Casino Manager"       => 2,
+        "Photography Manager"  => 2,
+        "Dance Manager"        => 2,
+        "Hype Manager"         => 2,
+        "Management Support"   => 2,
+        "Community Leader"     => 2,
+        "Photographer"         => 3,
+        "Bartender"            => 4,
+        _                      => 5,
     };
 
     private static Vector4? ParseColor(string? hex)
