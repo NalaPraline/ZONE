@@ -64,6 +64,7 @@ public sealed class Plugin : IDalamudPlugin
         Db.SeedDay2IfEmpty(ImageCache.DjLogosDir);
         Db.PatchLogoPathsIfNeeded(ImageCache.DjLogosDir);
         Db.SeedPartnersIfEmpty(ImageCache.PartnersDir);
+        Db.SeedActivitiesIfEmpty();
         Twitch.ResetIfNotEventDay();
 
         _timeLock      = new TimeLockService();

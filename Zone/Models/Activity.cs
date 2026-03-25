@@ -13,4 +13,9 @@ public class Activity
     public float? CoordinateY { get; set; }
     public float? CoordinateZ { get; set; }
     public string? StreamUrl { get; set; }
+    public string? MapZone   { get; set; }
+    public int?    PartnerId { get; set; }
+    public string? PotAmount { get; set; }
+    public string? Host      { get; set; }
+    public string? Details   { get; set; }
 }

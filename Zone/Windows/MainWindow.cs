@@ -27,8 +27,21 @@ public class MainWindow : Window, IDisposable
     private int    _activeTab   = 0;
     private int    _lineupDay   = 1;
     private int    _activityDay = 1;
-    private string _staffSearch = "";
+    private string    _staffSearch   = "";
+    private Activity? _mapActivity;
+    private bool      _openMapPopup;
+    private ISharedImmediateTexture? _mapTex;
+    private Activity? _detailsActivity;
+    private bool      _openDetailsPopup;
 
+    private static readonly Dictionary<string, Vector2> MapZonePos = new()
+    {
+        { "GAMES",        new Vector2(0.625f, 0.71f) },
+        { "BAR",          new Vector2(0.44f, 0.60f) },
+        { "BLACKJACK",    new Vector2(0.54f, 0.47f) },
+        { "STAGE",        new Vector2(0.42f, 0.44f) },
+        { "SEATING AREA", new Vector2(0.72f, 0.55f) },
+    };
 
     private static readonly string[] TabNames = { "HOME", "AMBIENCE", "LINEUP", "ACTIVITIES", "STAFF", "PARTNERS" };
 
@@ -40,6 +53,7 @@ public class MainWindow : Window, IDisposable
     private static readonly Vector4 CGrey   = new(0.50f, 0.50f, 0.50f, 1f);
     private static readonly Vector4 CDkGrey = new(0.28f, 0.28f, 0.28f, 1f);
     private static readonly Vector4 CGreen  = new(0f,    0.78f, 0.20f, 1f);
+    private static readonly Vector4 CGold   = new(1f,    0.80f, 0.28f, 1f);
 
     private const string EventDescription = "ZONE is ultimately at its core a music festival. Designed to maintain its focus around music and celebrating that to bring together a wealth of talents in the community to participate in a celebration of music.";
     private const string EventWebsiteUrl   = "https://thezone.pro/";
@@ -155,6 +169,11 @@ public class MainWindow : Window, IDisposable
                 }
             }
         }
+
+        if (_openMapPopup)     { ImGui.OpenPopup("##zoneMap");     _openMapPopup     = false; }
+        if (_openDetailsPopup) { ImGui.OpenPopup("##zoneDetails"); _openDetailsPopup = false; }
+        DrawMapPopup();
+        DrawDetailsPopup();
 
         DrawHudRect(wdl, wpos + new Vector2(1, 1), wpos + wsz - new Vector2(1, 1),
                     14f, U(CRed), 1.5f, glow: true);
@@ -321,11 +340,9 @@ public class MainWindow : Window, IDisposable
 
             if (pre)
             {
-                var diff = day1.AddHours(17) - now;
-                int d = (int)diff.TotalDays, h = diff.Hours, m = diff.Minutes;
-                line1 = d > 0 ? $"STARTS IN {d}D {h:D2}H {m:D2}M" : $"STARTS IN {h:D2}H {m:D2}M";
-                line2 = "ZONE  ·  MARCH 27 & 28, 2026";
-                col1  = U(CDkGrey);
+                line1 = "LIGHT  ·  RAIDEN  ·  SHIROGANE";
+                line2 = "BY THE BEACH";
+                col1  = U(CWhite);
             }
             else if (isEv)
             {
@@ -343,14 +360,41 @@ public class MainWindow : Window, IDisposable
             var sp = ImGui.GetCursorScreenPos();
             const float H = 54f;
 
+            // Reserve space first so cursor lands correctly after the banner
+            ImGui.Dummy(new Vector2(availW, H));
+            var afterBanner = ImGui.GetCursorPos();
+
             dl.AddRectFilled(sp, sp + new Vector2(availW, H), U(new Vector4(0.05f, 0.01f, 0.01f, 1f)));
             if (isEv) dl.AddRectFilled(sp, sp + new Vector2(3f, H), U(CRed));
 
             var  s1 = ImGui.CalcTextSize(line1);
             var  s2 = ImGui.CalcTextSize(line2);
-            float ty = sp.Y + (H - s1.Y - 4f - s2.Y) * 0.5f;
-            dl.AddText(new Vector2(sp.X + 16f, ty),           col1,      line1);
-            dl.AddText(new Vector2(sp.X + 16f, ty + s1.Y + 4f), U(CDkGrey), line2);
+            float ty  = sp.Y + (H - s1.Y - 4f - s2.Y) * 0.5f;
+            float tx1 = sp.X + (availW - s1.X) * 0.5f;
+            float tx2 = sp.X + (availW - s2.X) * 0.5f;
+            dl.AddText(new Vector2(tx1, ty),           col1,      line1);
+            dl.AddText(new Vector2(tx2, ty + s1.Y + 4f), U(CDkGrey), line2);
+
+            if (pre)
+            {
+                var mapTxt = "OPEN MAP";
+                var mapSz  = ImGui.CalcTextSize(mapTxt);
+                float mbW  = mapSz.X + 16f;
+                float mbH  = 20f;
+                float mbX  = sp.X + availW - mbW - 12f;
+                float mbY  = sp.Y + (H - mbH) * 0.5f;
+                ImGui.SetCursorScreenPos(new Vector2(mbX, mbY));
+                ImGui.InvisibleButton("##homeMap", new Vector2(mbW, mbH));
+                bool mhov = ImGui.IsItemHovered();
+                var  bmin = ImGui.GetItemRectMin();
+                var  bmax = ImGui.GetItemRectMax();
+                var  bctr = (bmin + bmax) * 0.5f;
+                if (mhov) dl.AddRectFilled(bmin, bmax, WithAlpha(U(CRed), 0x28), 2f);
+                dl.AddRect(bmin, bmax, mhov ? U(CBrRed) : WithAlpha(U(CRed), 0x66), 2f, ImDrawFlags.None, 1f);
+                dl.AddText(bctr - mapSz * 0.5f, mhov ? U(CWhite) : U(CGrey), mapTxt);
+                if (ImGui.IsItemClicked()) { _mapActivity = null; _openMapPopup = true; }
+                ImGui.SetCursorPos(afterBanner);
+            }
 
             if (isEv)
             {
@@ -360,7 +404,6 @@ public class MainWindow : Window, IDisposable
             }
 
             DrawHudRect(dl, sp, sp + new Vector2(availW, H), 8f, U(new Vector4(0.25f, 0f, 0f, 0.8f)), 1f);
-            ImGui.Dummy(new Vector2(availW, H));
         }
 
         ImGui.Spacing();
@@ -1003,85 +1046,312 @@ public class MainWindow : Window, IDisposable
         if (!scroll) return;
 
         var now = DateTime.UtcNow.TimeOfDay;
+        const float cardH    = 114f;
+        const float accentW  = 4f;
+        const float timeColW = 120f;
+        const float pad      = 14f;
+        const float rightW   = 210f;
+
         foreach (var act in today)
         {
             ImGui.PushID(act.Id);
             try
             {
                 bool isNow = false, isPast = false;
-                if (TimeSpan.TryParse(act.StartTime, out var aStart))
+                if (TimeSpan.TryParse(act.StartTime.Split('-')[0].Trim(), out var aStart))
                 {
-                    var dur = TimeSpan.FromHours(1);
+                    var dur = TimeSpan.FromHours(2);
                     isNow  = aStart <= now && now <= aStart + dur;
                     isPast = now > aStart + dur;
                 }
 
-                using var actAlpha  = ImRaii.PushStyle(ImGuiStyleVar.Alpha, 0.38f, isPast);
-                using var actBg     = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.08f, 0.08f, 0.08f, 1f));
+                using var actAlpha = ImRaii.PushStyle(ImGuiStyleVar.Alpha, 0.38f, isPast);
+                using var actBg    = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.06f, 0.04f, 0.04f, 1f));
+                using var noBorder = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
 
-                using (var card = ImRaii.Child($"act{act.Id}", new Vector2(-1, 60), true))
+                using (var card = ImRaii.Child($"act{act.Id}", new Vector2(-1, cardH), false))
                 {
-                    if (card)
+                    if (!card) continue;
+
+                    var cdl = ImGui.GetWindowDrawList();
+                    var cp  = ImGui.GetWindowPos();
+                    var csz = ImGui.GetWindowSize();
+
+                    // background wash + accent bar + border
+                    uint redWash = WithAlpha(U(CRed), isNow ? (byte)0x1A : (byte)0x0C);
+                    cdl.AddRectFilledMultiColor(cp, cp + csz, redWash, 0x00000000, 0x00000000, redWash);
+                    cdl.AddRectFilled(cp, cp + new Vector2(accentW, csz.Y), isNow ? U(CRed) : U(CDkGrey));
+                    cdl.AddRect(cp + Vector2.One, cp + csz - Vector2.One,
+                                isNow ? WithAlpha(U(CRed), 0x55) : WithAlpha(U(CDkGrey), 0x28), 3f);
+
+                    // time — vertically centred in left column
+                    var timeStr = act.StartTime + " ST";
+                    var timeSz  = ImGui.CalcTextSize(timeStr);
+                    ImGui.SetCursorPos(new Vector2(accentW + pad, (cardH - timeSz.Y) * 0.5f));
+                    ImGui.TextColored(isNow ? CBrRed : CWhite, timeStr);
+
+                    // separator
+                    float sepX = cp.X + accentW + pad + timeColW;
+                    cdl.AddLine(new Vector2(sepX, cp.Y + 14f), new Vector2(sepX, cp.Y + cardH - 14f),
+                                WithAlpha(U(CRed), 0x30), 1f);
+
+                    // name + description + pot — centre column
+                    float textX    = accentW + pad + timeColW + pad;
+                    float textMaxX = csz.X - rightW - pad;
+                    float lineH    = ImGui.GetTextLineHeightWithSpacing();
+                    float textH    = ImGui.GetTextLineHeight();
+                    bool  hasDesc  = !string.IsNullOrWhiteSpace(act.Description);
+                    bool  hasPot   = !string.IsNullOrWhiteSpace(act.PotAmount);
+                    bool  hasHost  = !string.IsNullOrWhiteSpace(act.Host);
+                    int   lines    = 1 + (hasDesc ? 1 : 0) + (hasPot ? 1 : 0) + (hasHost ? 1 : 0);
+                    float blockH   = (lines - 1) * lineH + textH;
+                    float nameY    = (cardH - blockH) * 0.5f;
+                    int   curLine  = 0;
+
+                    ImGui.PushClipRect(new Vector2(cp.X + textX, cp.Y), new Vector2(cp.X + textMaxX, cp.Y + cardH), true);
+
+                    ImGui.SetCursorPos(new Vector2(textX, nameY));
+                    ImGui.TextColored(CWhite, act.Name.ToUpperInvariant());
+                    if (isNow) { ImGui.SameLine(); ImGui.TextColored(CGreen, " ●"); }
+                    curLine++;
+
+                    if (hasDesc)
                     {
-                        ImGui.SetCursorPosX(10f);
-                        ImGui.TextColored(CDkGrey, act.StartTime);
-                        ImGui.SameLine(70 * ImGuiHelpers.GlobalScale);
-                        ImGui.TextColored(CWhite, act.Name.ToUpperInvariant());
-                        if (isNow) { ImGui.SameLine(); ImGui.TextColored(CGreen, "  ● NOW"); }
+                        float maxChars = (textMaxX - textX) / ImGui.CalcTextSize("W").X;
+                        var   desc     = act.Description!;
+                        ImGui.SetCursorPos(new Vector2(textX, nameY + curLine * lineH));
+                        ImGui.TextColored(CGrey, desc.Length > (int)maxChars ? desc[..(int)maxChars] + "…" : desc);
+                        curLine++;
+                    }
 
-                        float rightX = ImGui.GetWindowWidth() - 150 * ImGuiHelpers.GlobalScale;
-                        ImGui.SameLine(rightX);
-                        ImGui.TextColored(CDkGrey, act.LocationName ?? "");
+                    if (hasPot)
+                    {
+                        ImGui.SetCursorPos(new Vector2(textX, nameY + curLine * lineH));
+                        ImGui.TextColored(CGold, act.PotAmount!);
+                        curLine++;
+                    }
 
-                        ImGui.SetCursorPosX(70 * ImGuiHelpers.GlobalScale);
-                        if (!string.IsNullOrWhiteSpace(act.Description))
-                            ImGui.TextColored(CGrey, act.Description.Length > 50
-                                ? act.Description[..50] + "…" : act.Description);
+                    if (hasHost)
+                    {
+                        ImGui.SetCursorPos(new Vector2(textX, nameY + curLine * lineH));
+                        ImGui.TextColored(CGreen, $"HOSTED BY  {act.Host}");
+                    }
 
-                        ImGui.SameLine(rightX);
-                        if (ImGui.SmallButton("TAKE ME THERE")) HandleTakeMeThere(act);
+                    ImGui.PopClipRect();
+
+                    // right column — buttons (left) + logo (right)
+                    bool hasMap     = !string.IsNullOrEmpty(act.MapZone);
+                    bool hasDetails = !string.IsNullOrEmpty(act.Details);
+
+                    const float rPad   = 10f;
+                    const float abtnW  = 80f;
+                    const float abtnH  = 28f;
+                    const float abtnGap = 6f;
+                    float bZoneX = csz.X - rightW + rPad;
+                    float lZoneX = bZoneX + abtnW + 10f;
+                    float lZoneW = csz.X - lZoneX - rPad;
+
+                    // buttons stacked, vertically centred
+                    int   btnCount   = (hasDetails ? 1 : 0) + (hasMap ? 1 : 0);
+                    float totalBtnH  = btnCount * abtnH + Math.Max(0, btnCount - 1) * abtnGap;
+                    float curBtnY    = (cardH - totalBtnH) * 0.5f;
+
+                    void DrawCardBtn(string id, string label, System.Action onClick)
+                    {
+                        ImGui.SetCursorPos(new Vector2(bZoneX, curBtnY));
+                        ImGui.InvisibleButton(id, new Vector2(abtnW, abtnH));
+                        bool h  = ImGui.IsItemHovered();
+                        var  bm = ImGui.GetItemRectMin();
+                        var  bx = ImGui.GetItemRectMax();
+                        var  bc = (bm + bx) * 0.5f;
+                        if (h) cdl.AddRectFilled(bm, bx, WithAlpha(U(CRed), 0x28), 3f);
+                        cdl.AddRect(bm, bx, h ? U(CBrRed) : WithAlpha(U(CRed), 0x66), 3f, ImDrawFlags.None, 1f);
+                        var ts = ImGui.CalcTextSize(label);
+                        cdl.AddText(bc - ts * 0.5f, h ? U(CWhite) : U(CGrey), label);
+                        if (ImGui.IsItemClicked()) onClick();
+                        curBtnY += abtnH + abtnGap;
+                    }
+
+                    if (hasDetails) DrawCardBtn("##det", "DETAILS", () => { _detailsActivity = act; _openDetailsPopup = true; });
+                    if (hasMap)     DrawCardBtn("##map", "MAP",     () => { _mapActivity = act;     _openMapPopup     = true; });
+
+                    // logo centred in right zone
+                    var partner = act.PartnerId.HasValue
+                        ? _partners.FirstOrDefault(p => p.Id == act.PartnerId.Value)
+                        : null;
+
+                    if (partner?.LogoPath != null && File.Exists(partner.LogoPath))
+                    {
+                        if (!_texCache.TryGetValue(partner.LogoPath, out var logoShared))
+                        {
+                            logoShared = Plugin.TextureProvider.GetFromFile(new FileInfo(partner.LogoPath));
+                            _texCache[partner.LogoPath] = logoShared;
+                        }
+                        var logoWrap = logoShared?.GetWrapOrDefault();
+                        if (logoWrap != null)
+                        {
+                            float ratio  = logoWrap.Size.X / logoWrap.Size.Y;
+                            float maxLH  = 52f;
+                            float maxLW  = lZoneW;
+                            float lw     = MathF.Min(maxLH * ratio, maxLW);
+                            float lh     = lw / ratio;
+                            float lx     = cp.X + lZoneX + (lZoneW - lw) * 0.5f;
+                            float ly     = cp.Y + (cardH - lh) * 0.5f;
+                            cdl.AddImage(logoWrap.Handle, new Vector2(lx, ly), new Vector2(lx + lw, ly + lh),
+                                         Vector2.Zero, Vector2.One, 0xCCFFFFFF);
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(act.LocationName))
+                    {
+                        var locSz = ImGui.CalcTextSize(act.LocationName);
+                        float locX = lZoneX + (lZoneW - locSz.X) * 0.5f;
+                        ImGui.SetCursorPos(new Vector2(locX, (cardH - locSz.Y) * 0.5f));
+                        ImGui.TextColored(CDkGrey, act.LocationName);
                     }
                 }
             }
-            finally
-            {
-                ImGui.PopID();
-            }
+            finally { ImGui.PopID(); }
+
             ImGui.Spacing();
         }
 
         if (today.Count == 0)
             DrawEmptyState("NO ACTIVITIES SCHEDULED");
+
     }
 
-    private void HandleTakeMeThere(Activity act)
+    private void DrawMapPopup()
     {
-        if (!string.IsNullOrWhiteSpace(act.StreamUrl))
-        {
-            Dalamud.Utility.Util.OpenLink(act.StreamUrl);
-            return;
-        }
+        ImGui.SetNextWindowSize(new Vector2(1000, 640), ImGuiCond.Always);
+        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f, 0f));
+        bool open = ImGui.BeginPopupModal("##zoneMap", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove);
+        ImGui.PopStyleVar();
+        if (!open) return;
 
-        if (act.TerritoryId.HasValue && act.CoordinateX.HasValue && act.CoordinateY.HasValue)
+        var wpos = ImGui.GetWindowPos();
+        var wsz  = ImGui.GetWindowSize();
+        var dl   = ImGui.GetWindowDrawList();
+
+        var mapPath = Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "Data", "map.png");
+        _mapTex ??= Plugin.TextureProvider.GetFromFile(new FileInfo(mapPath));
+        var wrap = _mapTex.GetWrapOrDefault();
+
+        const float footerH = 48f;
+
+        if (wrap != null)
         {
-            try
+            float aspect = wrap.Size.X / wrap.Size.Y;
+            float imgW   = wsz.X;
+            float imgH   = wsz.Y - footerH;
+            if (imgW / imgH > aspect) imgW = imgH * aspect;
+            else imgH = imgW / aspect;
+
+            float ox = (wsz.X - imgW) * 0.5f;
+            var   mapScreenPos = new Vector2(wpos.X + ox, wpos.Y);
+            ImGui.SetCursorPos(new Vector2(ox, 0f));
+            ImGui.Image(wrap.Handle, new Vector2(imgW, imgH));
+
+            if (_mapActivity?.MapZone != null && MapZonePos.TryGetValue(_mapActivity.MapZone, out var frac))
             {
-                var payload = new Dalamud.Game.Text.SeStringHandling.Payloads.MapLinkPayload(
-                    (uint)act.TerritoryId.Value, (uint)act.TerritoryId.Value,
-                    act.CoordinateX.Value, act.CoordinateY.Value);
-                Plugin.GameGui.OpenMapWithMapLink(payload);
-                return;
+                float mx    = mapScreenPos.X + frac.X * imgW;
+                float my    = mapScreenPos.Y + frac.Y * imgH;
+                float blink = (float)(Math.Sin(ImGui.GetTime() * 4) * 0.5 + 0.5);
+                dl.AddCircleFilled(new Vector2(mx, my), 9f,  U(new Vector4(1f, 0.10f, 0.10f, 1f)));
+                dl.AddCircle(new Vector2(mx, my),       20f, U(new Vector4(1f, 0.10f, 0.10f, blink * 0.85f)), 0, 2f);
+                dl.AddCircle(new Vector2(mx, my),       30f, U(new Vector4(1f, 0.10f, 0.10f, blink * 0.35f)), 0, 1.5f);
             }
-            catch (Exception ex) { Plugin.Log.Warning(ex, "[Zone] Failed to open map link"); }
+
         }
 
-        Plugin.Notifications.AddNotification(new Dalamud.Interface.ImGuiNotification.Notification
+        // Footer bar
+        var footerMin = new Vector2(wpos.X, wpos.Y + wsz.Y - footerH);
+        var footerMax = new Vector2(wpos.X + wsz.X, wpos.Y + wsz.Y);
+        dl.AddRectFilled(footerMin, footerMax, U(new Vector4(0.07f, 0.04f, 0.04f, 1f)));
+        dl.AddLine(footerMin, new Vector2(footerMax.X, footerMin.Y), WithAlpha(U(CRed), 0x55), 1f);
+
+        if (_mapActivity != null)
         {
-            Title           = "ZONE",
-            Content         = "No location data configured for this activity.",
-            Type            = Dalamud.Interface.ImGuiNotification.NotificationType.Warning,
-            InitialDuration = TimeSpan.FromSeconds(4)
-        });
+            ImGui.SetCursorPos(new Vector2(16f, wsz.Y - footerH + (footerH - ImGui.GetTextLineHeight()) * 0.5f));
+            ImGui.TextColored(CBrRed, _mapActivity.Name.ToUpperInvariant());
+            if (!string.IsNullOrEmpty(_mapActivity.LocationName))
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(CGrey, $"   {_mapActivity.LocationName}");
+            }
+        }
+
+        // X close button (top-right corner)
+        float btnR   = 13f;
+        var   btnCtr = new Vector2(wpos.X + wsz.X - 26f, wpos.Y + 26f);
+        var   mouse  = ImGui.GetMousePos();
+        bool  ch     = Vector2.Distance(mouse, btnCtr) <= btnR + 3f;
+        dl.AddCircleFilled(btnCtr, btnR, ch ? WithAlpha(U(CRed), 0xDD) : WithAlpha(U(new Vector4(0.12f, 0.08f, 0.08f, 1f)), 0xFF));
+        dl.AddCircle(btnCtr, btnR, ch ? U(CBrRed) : WithAlpha(U(CRed), 0x66), 0, 1f);
+        float xo = 4f;
+        uint  xc = ch ? U(CWhite) : U(CGrey);
+        dl.AddLine(btnCtr - new Vector2(xo, xo), btnCtr + new Vector2(xo, xo), xc, 1.5f);
+        dl.AddLine(btnCtr + new Vector2(xo, -xo), btnCtr + new Vector2(-xo, xo), xc, 1.5f);
+        if (ch && ImGui.IsMouseClicked(ImGuiMouseButton.Left)) ImGui.CloseCurrentPopup();
+
+        ImGui.EndPopup();
+    }
+
+    private void DrawDetailsPopup()
+    {
+        ImGui.SetNextWindowSize(new Vector2(520, 0), ImGuiCond.Always);
+        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(24f, 24f));
+        bool open = ImGui.BeginPopupModal("##zoneDetails", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.AlwaysAutoResize);
+        ImGui.PopStyleVar();
+        if (!open) return;
+
+        var wpos = ImGui.GetWindowPos();
+        var wsz  = ImGui.GetWindowSize();
+        var dl   = ImGui.GetWindowDrawList();
+
+        if (_detailsActivity != null)
+        {
+            // header
+            ImGui.TextColored(CBrRed, _detailsActivity.Name.ToUpperInvariant());
+            if (!string.IsNullOrEmpty(_detailsActivity.LocationName))
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(CGrey, $"   {_detailsActivity.LocationName}");
+            }
+
+            ImGui.Spacing();
+            dl.AddLine(new Vector2(wpos.X + 24f, wpos.Y + ImGui.GetCursorPosY()),
+                       new Vector2(wpos.X + wsz.X - 24f, wpos.Y + ImGui.GetCursorPosY()),
+                       WithAlpha(U(CRed), 0x44), 1f);
+            ImGui.Spacing();
+
+            // body
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + 472f);
+            foreach (var line in _detailsActivity.Details!.Split('\n'))
+            {
+                if (string.IsNullOrEmpty(line)) { ImGui.Spacing(); continue; }
+                // section headers (all caps short lines) in red, rest in grey
+                bool isHeader = line == line.ToUpperInvariant() && line.Length < 30;
+                ImGui.TextColored(isHeader ? CBrRed : CGrey, line);
+            }
+            ImGui.PopTextWrapPos();
+        }
+
+        // X close button
+        var btnCtr = new Vector2(wpos.X + wsz.X - 26f, wpos.Y + 26f);
+        float btnR = 13f;
+        var mouse  = ImGui.GetMousePos();
+        bool ch    = Vector2.Distance(mouse, btnCtr) <= btnR + 3f;
+        dl.AddCircleFilled(btnCtr, btnR, ch ? WithAlpha(U(CRed), 0xDD) : WithAlpha(U(new Vector4(0.12f, 0.08f, 0.08f, 1f)), 0xFF));
+        dl.AddCircle(btnCtr, btnR, ch ? U(CBrRed) : WithAlpha(U(CRed), 0x66), 0, 1f);
+        float xo = 4f;
+        uint  xc = ch ? U(CWhite) : U(CGrey);
+        dl.AddLine(btnCtr - new Vector2(xo, xo), btnCtr + new Vector2(xo, xo), xc, 1.5f);
+        dl.AddLine(btnCtr + new Vector2(xo, -xo), btnCtr + new Vector2(-xo, xo), xc, 1.5f);
+        if (ch && ImGui.IsMouseClicked(ImGuiMouseButton.Left)) ImGui.CloseCurrentPopup();
+
+        ImGui.EndPopup();
     }
 
     private void DrawStaffTab()
@@ -1115,10 +1385,20 @@ public class MainWindow : Window, IDisposable
         ImGui.Spacing();
 
         var filter   = _staffSearch.Trim().ToLower();
-        var filtered = _staff.FindAll(s =>
-            string.IsNullOrEmpty(filter) ||
-            s.CharacterName.ToLower().Contains(filter) ||
-            s.Role.ToLower().Contains(filter));
+        var filtered = _staff
+            .Where(s =>
+                string.IsNullOrEmpty(filter) ||
+                s.CharacterName.ToLower().Contains(filter) ||
+                s.Role.ToLower().Contains(filter) ||
+                (s.Venue?.ToLower().Contains(filter) ?? false))
+            .OrderBy(s => RoleOrder(s.Role))
+            .ThenBy(s => s.Role)
+            .ThenBy(s => s.CharacterName)
+            .ToList();
+
+        float cardW = MathF.Floor((ImGui.GetContentRegionAvail().X - 8f) / 2f);
+        const float cardH = 76f;
+        const float pad   = 14f;
 
         using var scroll = ImRaii.Child("StaffScroll", Vector2.Zero, false);
         if (!scroll) return;
@@ -1129,24 +1409,32 @@ public class MainWindow : Window, IDisposable
             return;
         }
 
-        float cardW = (ImGui.GetContentRegionAvail().X - 8f) / 2f;
-        const float cardH = 76f;
-        const float pad   = 14f;
+        string? lastRole = null;
+        int col = 0;
 
         for (int i = 0; i < filtered.Count; i++)
         {
             var s = filtered[i];
+
+            if (s.Role != lastRole)
+            {
+                col = 0;
+                if (i > 0) ImGui.Spacing();
+                DrawSectionHeader(s.Role.ToUpperInvariant());
+                ImGui.Spacing();
+                lastRole = s.Role;
+            }
+
             ImGui.PushID(s.Id);
             try
             {
-                if (i % 2 != 0) ImGui.SameLine(cardW + 8f);
+                if (col == 1) ImGui.SameLine(cardW + 8f);
 
                 using var staffBg     = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.06f, 0.05f, 0.05f, 1f));
                 using var staffBorder = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
                 using (var card = ImRaii.Child($"staff{s.Id}", new Vector2(cardW, cardH), false))
                 {
-                    if (!card) continue;
-
+                  if (card) {
                     var   cdl     = ImGui.GetWindowDrawList();
                     var   cp      = ImGui.GetWindowPos();
                     var   csz     = ImGui.GetWindowSize();
@@ -1154,7 +1442,7 @@ public class MainWindow : Window, IDisposable
                     bool  online  = s.IsOnlineDetected;
 
                     // subtle gradient wash from role color on the left
-                    uint wash = WithAlpha(U(roleCol), online ? (byte)0x22 : (byte)0x0E);
+                    uint wash = WithAlpha(U(roleCol), online ? (byte)0x22 : (byte)0x16);
                     cdl.AddRectFilledMultiColor(
                         cp, cp + csz,
                         wash, 0x00000000,
@@ -1162,12 +1450,12 @@ public class MainWindow : Window, IDisposable
 
                     // left accent bar
                     cdl.AddRectFilled(cp, cp + new Vector2(3f, csz.Y),
-                        WithAlpha(U(roleCol), online ? (byte)0xFF : (byte)0x50));
+                        WithAlpha(U(roleCol), online ? (byte)0xFF : (byte)0x90));
 
                     // border
                     uint borderCol = online
                         ? U(new Vector4(0f, 0.45f, 0.14f, 0.45f))
-                        : WithAlpha(U(roleCol), 0x28);
+                        : WithAlpha(U(roleCol), 0x50);
                     cdl.AddRect(cp + Vector2.One, cp + csz - Vector2.One, borderCol, 3f);
 
                     float lineH  = ImGui.GetTextLineHeightWithSpacing();
@@ -1178,16 +1466,18 @@ public class MainWindow : Window, IDisposable
 
                     // name · role on same line
                     ImGui.SetCursorPos(new Vector2(textX, nameY));
-                    ImGui.TextColored(online ? CWhite : new Vector4(0.70f, 0.70f, 0.70f, 1f), s.CharacterName);
+                    ImGui.TextColored(online ? CWhite : new Vector4(0.85f, 0.85f, 0.85f, 1f), s.CharacterName);
                     ImGui.SameLine();
-                    ImGui.TextColored(new Vector4(roleCol.X, roleCol.Y, roleCol.Z, online ? 0.85f : 0.40f),
+                    ImGui.TextColored(new Vector4(roleCol.X, roleCol.Y, roleCol.Z, online ? 0.90f : 0.70f),
                                       $"· {s.Role.ToUpperInvariant()}");
 
-                    // world below
-                    if (!string.IsNullOrWhiteSpace(s.World))
+                    // world · venue below
+                    string? worldLine = s.World;
+                    if (!string.IsNullOrWhiteSpace(s.Venue)) worldLine = string.IsNullOrWhiteSpace(worldLine) ? s.Venue : $"{worldLine}  ·  {s.Venue}";
+                    if (!string.IsNullOrWhiteSpace(worldLine))
                     {
                         ImGui.SetCursorPos(new Vector2(textX, subY));
-                        ImGui.TextColored(new Vector4(0.30f, 0.30f, 0.30f, 1f), s.World);
+                        ImGui.TextColored(new Vector4(0.30f, 0.30f, 0.30f, 1f), worldLine);
                     }
 
                     if (online)
@@ -1214,13 +1504,15 @@ public class MainWindow : Window, IDisposable
                             if (obj != null) Plugin.TargetManager.Target = obj;
                         }
                     }
+                  } // end if (card)
                 }
             }
             finally
             {
                 ImGui.PopID();
             }
-            if (i % 2 == 0 && i == filtered.Count - 1) ImGui.NewLine();
+            col = (col + 1) % 2;
+            if (col == 0 && i == filtered.Count - 1) ImGui.NewLine();
         }
     }
 
@@ -1231,6 +1523,22 @@ public class MainWindow : Window, IDisposable
         int m = (int)ts.TotalMinutes;
         return m < 720 ? m + 1440 : m;
     }
+
+    private static int RoleOrder(string role) => role switch
+    {
+        "Venue Owner"          => 0,
+        "Bar Manager"          => 1,
+        "Gamba Manager"        => 1,
+        "Casino Manager"       => 1,
+        "Photography Manager"  => 1,
+        "Dance Manager"        => 1,
+        "Hype Manager"         => 1,
+        "Management Support"   => 1,
+        "Community Leader"     => 1,
+        "Photographer"         => 2,
+        "Bartender"            => 3,
+        _                      => 4,
+    };
 
     private static Vector4? ParseColor(string? hex)
     {

@@ -36,6 +36,9 @@ public class StaffMember
     [JsonPropertyName("world")]
     public string? World { get; set; }
 
+    [JsonPropertyName("venue")]
+    public string? Venue { get; set; }
+
     [JsonPropertyName("color")]
     public string? Color { get; set; }
 

@@ -140,8 +140,9 @@ public class ZoneVisionOverlay : Window
 
             if (staff != null)
             {
-                line    = $"< {staff.CharacterName.ToUpperInvariant()}  {staff.Role.ToUpperInvariant()} >";
-                lineCol = BrRed;
+                string venueStr = !string.IsNullOrEmpty(staff.Venue) ? $"  ·  {staff.Venue.ToUpperInvariant()}" : "";
+                line    = $"< {staff.CharacterName.ToUpperInvariant()}  {staff.Role.ToUpperInvariant()}{venueStr} >";
+                lineCol = ParseColor(staff.Color) ?? BrRed;
             }
             else
             {
@@ -166,6 +167,21 @@ public class ZoneVisionOverlay : Window
     }
 
     private static uint U(Vector4 v) => ImGui.ColorConvertFloat4ToU32(v);
+
+    private static Vector4? ParseColor(string? hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return null;
+        hex = hex.TrimStart('#');
+        if (hex.Length != 6) return null;
+        try
+        {
+            float r = Convert.ToInt32(hex[..2], 16) / 255f;
+            float g = Convert.ToInt32(hex[2..4], 16) / 255f;
+            float b = Convert.ToInt32(hex[4..6], 16) / 255f;
+            return new Vector4(r, g, b, 1f);
+        }
+        catch { return null; }
+    }
 
     private static bool DrawDayNightToggle(bool enabled, string id)
     {
