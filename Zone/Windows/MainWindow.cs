@@ -323,9 +323,7 @@ public class MainWindow : Window, IDisposable
         var now    = DateTime.UtcNow;
         var day1   = new DateTime(2026, 3, 27);
         var day2   = new DateTime(2026, 3, 28);
-        // Sets past midnight belong to the previous event day — shift back if before 6 AM
-        var eventDate = now.Hour < 6 ? now.Date.AddDays(-1) : now.Date;
-        int? evDay = eventDate == day1 ? 1 : eventDate == day2 ? 2 : (int?)null;
+        int? evDay = CurrentEventDay();
 
         float availW = ImGui.GetContentRegionAvail().X;
 
@@ -514,12 +512,14 @@ public class MainWindow : Window, IDisposable
                 ? actsToday.FindAll(a => IsActivityActive(a.StartTime, nowMin))
                 : new List<Zone.Models.Activity>();
 
-            if (active.Count == 0)
+            bool postEvent = !evDay.HasValue && now.Date >= day1;
+            if (active.Count == 0 || postEvent)
             {
                 var   noActSp  = ImGui.GetCursorScreenPos();
                 var   startNA  = ImGui.GetCursorPos();
                 const float NAH = 46f;
-                const string noActTxt = "NO ACTIVITY IN PROGRESS";
+                string noActTxt = postEvent ? "EVENT CONCLUDED" :
+                                  evDay.HasValue && now.TimeOfDay < TimeSpan.FromHours(17) ? "ACTIVITIES START AT 17:00 ST" : "NO ACTIVITY IN PROGRESS";
                 dl.AddRectFilled(noActSp, noActSp + new Vector2(availW, NAH), U(new Vector4(0.04f, 0.01f, 0.01f, 1f)), 3f);
                 DrawHudRect(dl, noActSp, noActSp + new Vector2(availW, NAH), 3f, U(new Vector4(0.22f, 0.02f, 0.02f, 0.7f)), 1f);
                 var naSz = ImGui.CalcTextSize(noActTxt);
@@ -1074,7 +1074,8 @@ public class MainWindow : Window, IDisposable
         using var scroll = ImRaii.Child("ActScroll", Vector2.Zero, false);
         if (!scroll) return;
 
-        var now = DateTime.UtcNow.TimeOfDay;
+        var now     = DateTime.UtcNow.TimeOfDay;
+        int? evDay  = CurrentEventDay();
         const float cardH    = 114f;
         const float accentW  = 4f;
         const float timeColW = 120f;
@@ -1087,12 +1088,19 @@ public class MainWindow : Window, IDisposable
             try
             {
                 int  nowMinAct = EventMinutes(now.Hours.ToString("D2") + ":" + now.Minutes.ToString("D2"));
-                bool isNow     = IsActivityActive(act.StartTime, nowMinAct);
+                bool isNow     = evDay == _activityDay && IsActivityActive(act.StartTime, nowMinAct);
                 bool isPast    = false;
-                var  parts     = act.StartTime.Split(" - ", StringSplitOptions.TrimEntries);
-                if (parts.Length > 1) isPast = nowMinAct >= EventMinutes(parts[1]);
-                else if (TimeSpan.TryParse(parts[0], out var aStart))
-                    isPast = now > aStart + TimeSpan.FromHours(2);
+                if (evDay == _activityDay)
+                {
+                    var parts2 = act.StartTime.Split(" - ", StringSplitOptions.TrimEntries);
+                    if (parts2.Length > 1) isPast = nowMinAct >= EventMinutes(parts2[1]);
+                    else if (TimeSpan.TryParse(parts2[0], out var aStart))
+                        isPast = now > aStart + TimeSpan.FromHours(2);
+                }
+                else if (evDay > _activityDay)
+                {
+                    isPast = true;
+                }
 
                 using var actAlpha = ImRaii.PushStyle(ImGuiStyleVar.Alpha, 0.38f, isPast);
                 using var actBg    = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.06f, 0.04f, 0.04f, 1f));
@@ -1543,6 +1551,15 @@ public class MainWindow : Window, IDisposable
             col = (col + 1) % 2;
             if (col == 0 && i == filtered.Count - 1) ImGui.NewLine();
         }
+    }
+
+    private static int? CurrentEventDay()
+    {
+        var now       = DateTime.UtcNow;
+        var day1      = new DateTime(2026, 3, 27);
+        var day2      = new DateTime(2026, 3, 28);
+        var eventDate = now.Hour < 3 ? now.Date.AddDays(-1) : now.Date;
+        return eventDate == day1 ? 1 : eventDate == day2 ? 2 : (int?)null;
     }
 
     private static bool IsActivityActive(string startTime, int nowMin)
