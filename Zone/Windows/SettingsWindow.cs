@@ -24,7 +24,7 @@ public class SettingsWindow : Window
         ImGuiWindowFlags.NoCollapse         |
         ImGuiWindowFlags.NoResize)
     {
-        Size          = new Vector2(420, 345);
+        Size          = new Vector2(420, 400);
         SizeCondition = ImGuiCond.Always;
         IsOpen        = false;
     }
