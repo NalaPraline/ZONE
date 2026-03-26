@@ -5,5 +5,6 @@
   "Description": "Zone is the all-in-one companion for ZONE events.\n\nFeatures:\n- Live DJ lineup with schedule\n- Activity tracker with teleport support\n- Staff directory\n- Zone Vision HUD overlay\n- Midnight time lock for full atmosphere\n\nCommands:\n/zone - Open the Zone window\n/zonevision - Toggle the Zone Vision overlay",
   "ApplicableVersion": "any",
   "Tags": ["venue", "nightclub", "schedule", "dj", "event", "zone"],
-  "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png"
+  "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png",
+  "Changelog": "1.2.8\n- Fixed staff online detection checking world to avoid false positives\n- Added overlay corner setting (top left, top right, bottom left, bottom right)\n- Activity updates and UI fixes\n- Overlay pin button and housing lock"
 }

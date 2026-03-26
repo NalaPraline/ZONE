@@ -24,7 +24,7 @@ public class SettingsWindow : Window
         ImGuiWindowFlags.NoCollapse         |
         ImGuiWindowFlags.NoResize)
     {
-        Size          = new Vector2(420, 270);
+        Size          = new Vector2(420, 345);
         SizeCondition = ImGuiCond.Always;
         IsOpen        = false;
     }
@@ -162,6 +162,42 @@ public class SettingsWindow : Window
         }
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + indent);
         ImGui.TextColored(CGrey, "Compact HUD widget showing current DJ and mode status.");
+
+        ImGui.Spacing();
+        ImGui.Spacing();
+
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + indent);
+        ImGui.TextColored(CGrey, "Default pinned corner:");
+        ImGui.Spacing();
+
+        // 2x2 corner picker
+        // corners: 0=TL 1=TR 2=BL 3=BR
+        string[] labels  = { "TOP LEFT", "TOP RIGHT", "BOTTOM LEFT", "BOTTOM RIGHT" };
+        int[]    corners = { 0, 1, 2, 3 };
+        int      current = config.OverlayCorner;
+
+        using var fr  = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding,  3f);
+        using var isp = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(6f, 6f));
+
+        float btnW = (ImGui.GetContentRegionAvail().X - indent - 6f) * 0.5f;
+        float btnH = ImGui.GetTextLineHeight() + 10f;
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == 0 || i == 2) ImGui.SetCursorPosX(ImGui.GetCursorPosX() + indent);
+
+            bool selected = current == corners[i];
+            using var bc  = ImRaii.PushColor(ImGuiCol.Button,        selected ? new Vector4(0.50f, 0f, 0f, 0.90f) : new Vector4(0.12f, 0.12f, 0.12f, 1f));
+            using var bch = ImRaii.PushColor(ImGuiCol.ButtonHovered, selected ? new Vector4(0.70f, 0f, 0f, 1f)    : new Vector4(0.22f, 0.22f, 0.22f, 1f));
+            using var tc  = ImRaii.PushColor(ImGuiCol.Text, selected ? new Vector4(1f, 1f, 1f, 1f) : new Vector4(0.55f, 0.55f, 0.55f, 1f));
+
+            if (ImGui.Button(labels[i] + "##corner" + i, new Vector2(btnW, btnH)))
+            {
+                config.OverlayCorner = corners[i];
+                Plugin.Db.SaveConfig(config);
+            }
+            if (i % 2 == 0) ImGui.SameLine();
+        }
     }
 
     private static void DrawSectionHeader(string text)

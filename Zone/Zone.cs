@@ -98,6 +98,9 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Toggle the Zone Vision HUD overlay"
         });
 
+        // Init housing state for current territory (plugin may load while already inside a house)
+        _timeLock.OnTerritoryChanged(ClientState.TerritoryType);
+
         var cfg = Db.GetConfig();
         if (cfg.ZoneVisionEnabled)
             _overlay.IsOpen = true;

@@ -17,5 +17,6 @@ public class Activity
     public int?    PartnerId { get; set; }
     public string? PotAmount { get; set; }
     public string? Host      { get; set; }
-    public string? Details   { get; set; }
+    public string? Details    { get; set; }
+    public string? ContactUrl { get; set; }
 }

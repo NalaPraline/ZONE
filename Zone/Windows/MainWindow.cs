@@ -140,12 +140,28 @@ public class MainWindow : Window, IDisposable
         if (_forceRefresh || (DateTime.Now - _dataRefreshed).TotalSeconds > 30)
             RefreshData();
 
-        var onlineNames = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var onlinePlayers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var worldSheet    = Plugin.DataManager?.GetExcelSheet<Lumina.Excel.Sheets.World>();
         foreach (var obj in Plugin.ObjectTable)
-            if ((int)obj.ObjectKind == 1) // ObjectKind.Player = 1
-                onlineNames.Add(obj.Name.TextValue);
+        {
+            if ((int)obj.ObjectKind != 1) continue;
+            string playerName = obj.Name.TextValue;
+            string? world = null;
+            unsafe
+            {
+                try
+                {
+                    ushort wid = ((FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara*)obj.Address)->Character.HomeWorld;
+                    world = worldSheet?.GetRow(wid).Name.ToString();
+                }
+                catch { }
+            }
+            onlinePlayers.Add(world != null ? $"{playerName}@{world}" : playerName);
+        }
         foreach (var s in _staff)
-            s.IsOnlineDetected = onlineNames.Contains(s.CharacterName);
+            s.IsOnlineDetected = s.World != null
+                ? onlinePlayers.Contains($"{s.CharacterName}@{s.World}")
+                : onlinePlayers.Contains(s.CharacterName);
 
         var wdl  = ImGui.GetWindowDrawList();
         var wpos = ImGui.GetWindowPos();
@@ -1171,7 +1187,7 @@ public class MainWindow : Window, IDisposable
                     if (hasHost)
                     {
                         ImGui.SetCursorPos(new Vector2(textX, nameY + curLine * lineH));
-                        ImGui.TextColored(CGreen, $"HOSTED BY  {act.Host}");
+                        ImGui.TextColored(CGreen, $"HOSTED BY {act.Host}");
                     }
 
                     ImGui.PopClipRect();
@@ -1373,6 +1389,21 @@ public class MainWindow : Window, IDisposable
                 ImGui.TextColored(isHeader ? CBrRed : CGrey, line);
             }
             ImGui.PopTextWrapPos();
+
+            if (!string.IsNullOrEmpty(_detailsActivity.ContactUrl))
+            {
+                ImGui.Spacing();
+                ImGui.Spacing();
+                float btnW = 472f;
+                using var btnRnd = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 4f);
+                using var btnPad = ImRaii.PushStyle(ImGuiStyleVar.FramePadding, new Vector2(0f, 8f));
+                using var btnCol    = ImRaii.PushColor(ImGuiCol.Button,        new Vector4(0.08f, 0.04f, 0.14f, 1f));
+                using var btnColHov = ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.14f, 0.07f, 0.24f, 1f));
+                using var btnColAct = ImRaii.PushColor(ImGuiCol.ButtonActive,  new Vector4(0.18f, 0.09f, 0.30f, 1f));
+                using var txtCol    = ImRaii.PushColor(ImGuiCol.Text, new Vector4(0.72f, 0.51f, 1f, 1f));
+                if (ImGui.Button("CONTACT ON DISCORD", new Vector2(btnW, 0f)))
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_detailsActivity.ContactUrl) { UseShellExecute = true });
+            }
         }
 
         // X close button
@@ -1501,6 +1532,16 @@ public class MainWindow : Window, IDisposable
                     float nameY  = (cardH - totalH) * 0.5f;
                     float subY   = nameY + lineH;
 
+                    const string tgtLabel = "TARGET";
+                    float btnW = ImGui.CalcTextSize(tgtLabel).X + 16f;
+                    float btnH = ImGui.GetTextLineHeight() + 6f;
+                    float btnX = csz.X - btnW - pad;
+                    float btnY = (cardH - btnH) * 0.5f;
+
+                    // clip text area so it never overlaps the TARGET button zone
+                    float textClipRight = cp.X + (online ? btnX - 6f : csz.X - pad);
+                    ImGui.PushClipRect(new Vector2(cp.X, cp.Y), new Vector2(textClipRight, cp.Y + cardH), true);
+
                     // name · role on same line
                     ImGui.SetCursorPos(new Vector2(textX, nameY));
                     ImGui.TextColored(online ? CWhite : new Vector4(0.85f, 0.85f, 0.85f, 1f), s.CharacterName);
@@ -1517,17 +1558,13 @@ public class MainWindow : Window, IDisposable
                         ImGui.TextColored(new Vector4(0.30f, 0.30f, 0.30f, 1f), worldLine);
                     }
 
+                    ImGui.PopClipRect();
+
                     if (online)
                     {
-                        const string tgtLabel = "TARGET";
-                        float btnW = ImGui.CalcTextSize(tgtLabel).X + 16f;
-                        float btnH = ImGui.GetTextLineHeight() + 6f;
-                        float btnX = csz.X - btnW - pad;
-                        float btnY = (cardH - btnH) * 0.5f;
-
-                        // ● dot above button
+                        // ● dot centered above button
                         cdl.AddCircleFilled(
-                            new Vector2(cp.X + btnX + btnW * 0.5f, cp.Y + btnY - 8f),
+                            new Vector2(cp.X + btnX + btnW * 0.5f, cp.Y + btnY - 7f),
                             3f, U(CGreen));
 
                         using var fr = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 3f);
