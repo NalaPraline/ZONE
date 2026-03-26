@@ -1,5 +1,7 @@
 # ZONE
 
+![ZONE Plugin Preview](Zone/Data/preview.png)
+
 Dalamud plugin companion for the ZONE music festival event in Final Fantasy XIV, March 27 & 28, 2026.
 
 Shows the live lineup, DJ schedule, activity tracker, staff directory, and a HUD overlay (Zone Vision). Includes a midnight time lock for full atmosphere immersion.
