@@ -70,6 +70,7 @@ public sealed class TimeLockService : IDisposable
 
     public void OnTerritoryChanged(ushort territoryId)
     {
+        if (territoryId == 0) return;
         var row = Plugin.DataManager.GetExcelSheet<TerritoryType>()?.GetRow(territoryId);
         IsHousingInterior = row?.TerritoryIntendedUse.RowId == HousingIntendedUse;
         Plugin.Log.Information($"[Zone] Territory changed: {territoryId}, housing={IsHousingInterior}");
