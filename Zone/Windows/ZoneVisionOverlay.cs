@@ -19,8 +19,8 @@ public class ZoneVisionOverlay : Window
 
     private const float W = 420f;
 
-    private bool _pinned = true;
-
+    private bool     _pinned    = true;
+    private Vector2? _pinnedPos = null;
 
     private ISharedImmediateTexture? _logoTexture;
     private readonly string _logoPath;
@@ -44,15 +44,22 @@ public class ZoneVisionOverlay : Window
     {
         if (_pinned)
         {
-            var viewport = ImGui.GetMainViewport();
-            int corner = Plugin.Db.GetConfig().OverlayCorner;
-            bool left   = corner == 0 || corner == 2;
-            bool top    = corner == 0 || corner == 1;
-            var pivot   = new Vector2(left ? 0f : 1f, top ? 0f : 1f);
-            var offset  = new Vector2(left ? 16f : -16f, top ? 16f : -16f);
-            ImGui.SetNextWindowPos(
-                viewport.Pos + new Vector2(left ? 0f : viewport.Size.X, top ? 0f : viewport.Size.Y) + offset,
-                ImGuiCond.Always, pivot);
+            if (_pinnedPos.HasValue)
+            {
+                ImGui.SetNextWindowPos(_pinnedPos.Value, ImGuiCond.Always);
+            }
+            else
+            {
+                var viewport = ImGui.GetMainViewport();
+                int corner = Plugin.Db.GetConfig().OverlayCorner;
+                bool left   = corner == 0 || corner == 2;
+                bool top    = corner == 0 || corner == 1;
+                var pivot   = new Vector2(left ? 0f : 1f, top ? 0f : 1f);
+                var offset  = new Vector2(left ? 16f : -16f, top ? 16f : -16f);
+                ImGui.SetNextWindowPos(
+                    viewport.Pos + new Vector2(left ? 0f : viewport.Size.X, top ? 0f : viewport.Size.Y) + offset,
+                    ImGuiCond.Always, pivot);
+            }
         }
         Flags = _pinned
             ? Flags |  ImGuiWindowFlags.NoMove
@@ -100,16 +107,15 @@ public class ZoneVisionOverlay : Window
         else
             ImGui.TextColored(timeLock ? BrRed : Grey, timeLock ? "ZONE MODE ON" : "ZONE MODE OFF");
 
-        // Pin button (top-right, before logo)
+        // Pin + Reset buttons (top-right, before logo)
         ImGui.SameLine();
-        float pinX = W - 12f - 20f;
         _logoTexture ??= Plugin.TextureProvider.GetFromFile(new FileInfo(_logoPath));
         var logoWrap = _logoTexture.GetWrapOrDefault();
+        float logoW = 0f;
         if (logoWrap != null)
         {
             float logoH = 24f;
-            float logoW = logoWrap.Size.X / logoWrap.Size.Y * logoH;
-            pinX -= logoW + 6f;
+            logoW = logoWrap.Size.X / logoWrap.Size.Y * logoH;
             float logoX = wpos.X + W - 12f - logoW;
             float logoY = wpos.Y + 8f;
             dl.AddImage(logoWrap.Handle,
@@ -117,9 +123,25 @@ public class ZoneVisionOverlay : Window
                 new Vector2(logoX + logoW, logoY + logoH),
                 Vector2.Zero, Vector2.One, 0xAAFFFFFF);
         }
-        ImGui.SetCursorPos(new Vector2(pinX, ImGui.GetCursorPosY() - 5f));
+        const float btnS = 22f, btnGap = 4f;
+        float pinX   = W - 12f - logoW - 6f - btnS;
+        float resetX = pinX - btnGap - btnS;
+        float btnY   = ImGui.GetCursorPosY() - 5f;
+
+        ImGui.SetCursorPos(new Vector2(resetX, btnY));
+        if (DrawResetButton(_pinnedPos.HasValue || !_pinned, "##reset"))
+        {
+            _pinnedPos = null;
+            _pinned    = true;
+        }
+
+        ImGui.SetCursorPos(new Vector2(pinX, btnY));
         if (DrawPinButton(_pinned, "##pin"))
+        {
+            if (!_pinned)
+                _pinnedPos = ImGui.GetWindowPos();
             _pinned = !_pinned;
+        }
 
         ImGui.Separator();
 
@@ -234,6 +256,44 @@ public class ZoneVisionOverlay : Window
         dl.AddCircleFilled(pos + new Vector2(S / 2f, S / 2f), enabled && !disabled ? 5f : 3.5f, dot);
 
         return clicked;
+    }
+
+    private static bool DrawResetButton(bool active, string id)
+    {
+        var dl  = ImGui.GetWindowDrawList();
+        var pos = ImGui.GetCursorScreenPos();
+        const float S = 22f, R = 4f;
+
+        ImGui.InvisibleButton(id, new Vector2(S, S));
+        bool clicked = ImGui.IsItemClicked();
+        bool hovered = ImGui.IsItemHovered();
+
+        uint fill   = active ? U(new Vector4(0.18f, 0.18f, 0.18f, 1f)) : U(new Vector4(0.10f, 0.10f, 0.10f, 1f));
+        uint border = active ? U(Grey) : U(hovered ? Grey : DkGrey);
+        dl.AddRectFilled(pos, pos + new Vector2(S, S), fill, R);
+        dl.AddRect(pos, pos + new Vector2(S, S), border, R, ImDrawFlags.None, 1f);
+
+        // House icon
+        uint ic = active ? U(White) : U(Grey);
+        float cx = pos.X + S / 2f;
+        float cy = pos.Y + S / 2f;
+        dl.AddLine(new Vector2(cx - 5f, cy - 1f), new Vector2(cx,       cy - 6f), ic, 1.5f);
+        dl.AddLine(new Vector2(cx,       cy - 6f), new Vector2(cx + 5f, cy - 1f), ic, 1.5f);
+        dl.AddLine(new Vector2(cx - 4f, cy - 1f), new Vector2(cx - 4f, cy + 5f),  ic, 1.5f);
+        dl.AddLine(new Vector2(cx + 4f, cy - 1f), new Vector2(cx + 4f, cy + 5f),  ic, 1.5f);
+        dl.AddLine(new Vector2(cx - 4f, cy + 5f), new Vector2(cx + 4f, cy + 5f),  ic, 1.5f);
+
+        if (hovered)
+        {
+            const string tip = "Reset position";
+            var ts  = ImGui.CalcTextSize(tip);
+            var tp  = pos + new Vector2(-ts.X - 6f, (S - ts.Y) / 2f);
+            dl.AddRectFilled(tp - new Vector2(4f, 2f), tp + ts + new Vector2(4f, 2f),
+                             U(new Vector4(0.1f, 0.1f, 0.1f, 0.9f)), 3f);
+            dl.AddText(tp, U(Grey), tip);
+        }
+
+        return clicked && active;
     }
 
     private static bool DrawPinButton(bool pinned, string id)

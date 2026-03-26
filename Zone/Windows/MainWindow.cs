@@ -43,7 +43,7 @@ public class MainWindow : Window, IDisposable
         { "SEATING AREA", new Vector2(0.72f, 0.55f) },
     };
 
-    private static readonly string[] TabNames = { "HOME", "AMBIENCE", "LINEUP", "ACTIVITIES", "STAFF", "PARTNERS" };
+    private static readonly string[] TabNames = { "HOME", "AMBIENCE", "LINEUP", "ACTIVITIES", "BAR", "STAFF", "PARTNERS" };
 
     private readonly Dictionary<string, ISharedImmediateTexture> _texCache = new();
 
@@ -180,8 +180,9 @@ public class MainWindow : Window, IDisposable
                     case 1: DrawAmbienceTab();    break;
                     case 2: DrawLineupTab();      break;
                     case 3: DrawActivitiesTab();  break;
-                    case 4: DrawStaffTab();        break;
-                    case 5: DrawPartnersTab();     break;
+                    case 4: DrawBarTab();          break;
+                    case 5: DrawStaffTab();        break;
+                    case 6: DrawPartnersTab();     break;
                 }
             }
         }
@@ -1880,6 +1881,111 @@ public class MainWindow : Window, IDisposable
         var p = ImGui.GetCursorScreenPos();
         ImGui.GetWindowDrawList().AddRectFilled(p, p + size, 0xFF222222);
         ImGui.Dummy(size);
+    }
+
+    private void DrawBarTab()
+    {
+        var drinkAccent = new Vector4(0.08f, 0.75f, 0.68f, 1f);
+        var snackAccent = new Vector4(0.95f, 0.72f, 0.20f, 1f);
+
+        Vector4 StrengthCol(string s) => s switch
+        {
+            "LIGHT"       => new Vector4(0.38f, 0.80f, 1.00f, 1f),
+            "MEDIUM"      => new Vector4(1.00f, 0.80f, 0.20f, 1f),
+            "STRONG"      => new Vector4(1.00f, 0.50f, 0.12f, 1f),
+            "VERY STRONG" => new Vector4(0.90f, 0.15f, 0.15f, 1f),
+            _             => CGrey,
+        };
+
+        const float cardH   = 56f;
+        const float accentW = 4f;
+        const float pad     = 14f;
+        int idx = 0;
+
+        void DrawItem(string name, string desc, string? strength, Vector4 accent)
+        {
+            using var bg     = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.06f, 0.04f, 0.04f, 1f));
+            using var border = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
+            using var card   = ImRaii.Child($"barItem{idx++}", new Vector2(-1, cardH), false);
+            if (!card) return;
+
+            var dl  = ImGui.GetWindowDrawList();
+            var cp  = ImGui.GetWindowPos();
+            var csz = ImGui.GetWindowSize();
+
+            dl.AddRectFilledMultiColor(cp, cp + csz,
+                WithAlpha(U(accent), 0x10), 0x00000000, 0x00000000, WithAlpha(U(accent), 0x10));
+            dl.AddRectFilled(cp, cp + new Vector2(accentW, csz.Y), U(accent));
+            dl.AddRect(cp + Vector2.One, cp + csz - Vector2.One, WithAlpha(U(accent), 0x2A), 3f);
+
+            float lh     = ImGui.GetTextLineHeightWithSpacing();
+            float th     = ImGui.GetTextLineHeight();
+            float blockH = lh + th;
+            float startY = (cardH - blockH) * 0.5f;
+
+            if (strength != null)
+            {
+                var sc  = StrengthCol(strength);
+                var sSz = ImGui.CalcTextSize(strength);
+                const float bpx = 7f, bpy = 2.5f;
+                float bW  = sSz.X + bpx * 2f;
+                float bH  = sSz.Y + bpy * 2f;
+                float bX  = csz.X - pad - bW;
+                float bY  = startY + (th - bH) * 0.5f;
+                var bMin  = cp + new Vector2(bX, bY);
+                var bMax  = bMin + new Vector2(bW, bH);
+                dl.AddRectFilled(bMin, bMax, WithAlpha(U(sc), 0x28), 3f);
+                dl.AddRect(bMin, bMax, WithAlpha(U(sc), 0x80), 3f, ImDrawFlags.None, 1f);
+                dl.AddText(bMin + new Vector2(bpx, bpy), U(sc), strength);
+            }
+
+            const string priceStr = "2,000 Gil";
+            var priceSz  = ImGui.CalcTextSize(priceStr);
+            float priceX = csz.X - pad - priceSz.X;
+            dl.AddText(cp + new Vector2(priceX, startY + lh), U(CGold), priceStr);
+
+            ImGui.SetCursorPos(new Vector2(accentW + pad, startY));
+            ImGui.TextColored(CWhite, name);
+
+            ImGui.SetCursorPos(new Vector2(accentW + pad, startY + lh));
+            ImGui.TextColored(CGrey, desc);
+        }
+
+        using var scroll = ImRaii.Child("BarScroll", Vector2.Zero, false);
+        if (!scroll) return;
+
+        ImGui.Dummy(new Vector2(0, 6f));
+        DrawSectionHeader("REFRESHMENTS");
+        ImGui.Dummy(new Vector2(0, 6f));
+
+        DrawItem("Future Splash",      "Gin, elderflower, cucumber, topped with soda",                                   "LIGHT",       drinkAccent);
+        ImGui.Spacing();
+        DrawItem("K-POP Punch",        "Soju, strawberry syrup, lychee juice, lemon soda, edible glitter",              "LIGHT",       drinkAccent);
+        ImGui.Spacing();
+        DrawItem("Eurobeat Spritz",    "Aperol, prosecco, soda, orange slice",                                           "LIGHT",       drinkAccent);
+        ImGui.Spacing();
+        DrawItem("Chiptune Pulse",     "Vodka, blue curaçao, lemonade, Fizz Wizz popping candy garnish",                "MEDIUM",      drinkAccent);
+        ImGui.Spacing();
+        DrawItem("Funky House Flow",   "Tequila, pineapple juice, coconut cream, lime",                                  "MEDIUM",      drinkAccent);
+        ImGui.Spacing();
+        DrawItem("Bass & Bubbles",     "Spiced rum, mango juice, chili, lime, and a dash of bitters",                    "STRONG",      drinkAccent);
+        ImGui.Spacing();
+        DrawItem("Dark Electro Surge", "Black vodka, Phoenix Energy\u2122 drink, blackberry liqueur, 3 drops Chili Tincture", "VERY STRONG", drinkAccent);
+        ImGui.Spacing();
+        DrawItem("Drum & Bass Drop",   "Dark rum, espresso shot, coffee liqueur, and cream float",                       "VERY STRONG", drinkAccent);
+
+        ImGui.Dummy(new Vector2(0, 14f));
+        DrawSectionHeader("SNACKS");
+        ImGui.Dummy(new Vector2(0, 6f));
+
+        DrawItem("Crunchwave Nachos", "Nachos with cheese and tomato sauce",                null, snackAccent);
+        ImGui.Spacing();
+        DrawItem("Rave Roast Sticks", "Meat and vegetable skewers",                         null, snackAccent);
+        ImGui.Spacing();
+        DrawItem("Bassline Tacos",    "Tacos with smoky meat and vegetables",                null, snackAccent);
+        ImGui.Spacing();
+        DrawItem("Mainstage Burger",  "Burger with cheese, tomato, lettuce and beef patty",  null, snackAccent);
+
     }
 
     private void DrawPartnersTab()
