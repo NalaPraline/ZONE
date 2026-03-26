@@ -4,26 +4,46 @@
 
 Dalamud plugin companion for the ZONE music festival event in Final Fantasy XIV, March 27 & 28, 2026.
 
-Shows the live lineup, DJ schedule, activity tracker, staff directory, and a HUD overlay (Zone Vision). Includes a midnight time lock for full atmosphere immersion.
+## ◇ FEATURES
 
+**<span style="color: #CC0000">// </span>AMBIENCE TOGGLE**
+Change the time to night and lock the weather. Experience ZONE the way we want you to.
 
-## Commands
+**<span style="color: #CC0000">// </span>DJ SCHEDULE + LIVE UPDATE**
+View all the DJs on the night, see the schedule, and be notified who is currently playing live.
 
-`/zone` opens the main window
+**<span style="color: #CC0000">// </span>LIFESTREAM SUPPORT**
+Take yourself straight to ZONE with zero effort. A one-click button to teleport straight there.
 
-`/zonevision` toggles the Zone Vision overlay
+**<span style="color: #CC0000">// </span>VISION TARGETING**
+Target anyone on the night and reveal their role. Navigate your way through the event and find the contact point you need.
 
-## Installation
+**<span style="color: #CC0000">// </span>STAFF LIST**
+View all the staff on the event and instantly target them.
 
-This plugin is not on the official Dalamud repository. To install it:
+**<span style="color: #CC0000">// </span>GAMES + ACTIVITY**
+View all games on the night and how to play.
 
-1. In-game, type `/xlsettings` to open Dalamud settings
-2. Go to **Experimental** and paste this URL under **Custom Plugin Repositories**:
-   `https://raw.githubusercontent.com/NalaPraline/ZONE/main/pluginmaster.json`
-3. Save, then open `/xlplugins`, search for **Zone** and install it
+## ◇ INSTRUCTIONS
 
-The [Lifestream](https://github.com/NightmareXIV/Lifestream) plugin is required if you want to use the teleport button to get directly to the event location.
+**<span style="color: #CC0000">// </span>ADD THE CUSTOM REPOSITORY**
+Open Dalamud settings with `/xlsettings`, go to **Experimental**, and paste the following URL under **Custom Plugin Repositories**:
+```
+https://raw.githubusercontent.com/NalaPraline/ZONE/main/pluginmaster.json
+```
 
-## License
+**<span style="color: #CC0000">// </span>OPEN THE MAIN MENU**
+View everything about ZONE using the command below:
+```
+/zone
+```
 
-GNU Affero General Public License v3.0, see [LICENSE.md](LICENSE.md) for details.
+**<span style="color: #CC0000">// </span>TOGGLE THE OVERLAY**
+Toggle the small overlay so it stays with you all night:
+```
+/zonevision
+```
+
+## ◇ LICENSE
+
+GNU Affero General Public License v3.0 — see [LICENSE](LICENSE) for details.
