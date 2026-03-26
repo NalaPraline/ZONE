@@ -6,7 +6,7 @@ Dalamud plugin companion for the ZONE music festival event in Final Fantasy XIV,
 
 ## ◇ FEATURES
 
-**<span style="color: #CC0000">// </span>AMBIENCE TOGGLE**
+![](docs/assets/heading_test.svg)
 Change the time to night and lock the weather. Experience ZONE the way we want you to.
 
 **<span style="color: #CC0000">// </span>DJ SCHEDULE + LIVE UPDATE**
