@@ -66,7 +66,7 @@ public class MainWindow : Window, IDisposable
     private const string PlayerSyncPass    = "thezoneproject";
     // Lifestream: Shirogane=3, Ward 1, Plot 7
     private const int    TpWard  = 1;
-    private const int    TpPlot  = 7;
+    private const int    TpPlot  = 3;
 
     private static uint U(Vector4 v)              => ImGui.ColorConvertFloat4ToU32(v);
     private static uint WithAlpha(uint c, byte a) => (c & 0x00FFFFFF) | ((uint)a << 24);
@@ -925,13 +925,15 @@ public class MainWindow : Window, IDisposable
         bool inHousing = Plugin.TimeLock.IsHousingInterior;
 
         ImGui.SetCursorPos(new Vector2(toggleX, toggleY));
+        var toggleScreenPos = ImGui.GetCursorScreenPos();
         if (inHousing) ImGui.BeginDisabled();
         if (DrawDayNightToggle(active, "##timeLock"))
             Plugin.TimeLock.SetEnabled(!active);
         if (inHousing) ImGui.EndDisabled();
-        ImGui.SameLine();
-        ImGui.SetCursorPosY(toggleY + 11f);
-        ImGui.TextColored(inHousing || !active ? CDkGrey : CBrRed, statusLabel);
+        float labelScrX = toggleScreenPos.X + TGLW + ImGui.GetStyle().ItemSpacing.X;
+        float labelScrY = toggleScreenPos.Y + 18f - ImGui.GetTextLineHeight() * 0.5f - 8f;
+        var labelCol = ImGui.ColorConvertFloat4ToU32(inHousing || !active ? CDkGrey : CBrRed);
+        ImGui.GetWindowDrawList().AddText(new Vector2(labelScrX, labelScrY), labelCol, statusLabel);
 
         string desc = inHousing
             ? "Unavailable inside housing interiors."
