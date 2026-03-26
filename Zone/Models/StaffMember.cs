@@ -42,6 +42,9 @@ public class StaffMember
     [JsonPropertyName("color")]
     public string? Color { get; set; }
 
+    [JsonPropertyName("vipPrice")]
+    public int? VipPrice { get; set; }
+
     // Runtime only — set by online detection, not stored
     [System.Text.Json.Serialization.JsonIgnore]
     public bool IsOnlineDetected { get; set; }

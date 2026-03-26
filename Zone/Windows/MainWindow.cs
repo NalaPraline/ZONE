@@ -43,7 +43,7 @@ public class MainWindow : Window, IDisposable
         { "SEATING AREA", new Vector2(0.72f, 0.55f) },
     };
 
-    private static readonly string[] TabNames = { "HOME", "AMBIENCE", "LINEUP", "ACTIVITIES", "BAR", "STAFF", "PARTNERS" };
+    private static readonly string[] TabNames = { "HOME", "AMBIENCE", "LINEUP", "ACTIVITIES", "BAR", "STAFF", "VIP", "PARTNERS" };
 
     private readonly Dictionary<string, ISharedImmediateTexture> _texCache = new();
 
@@ -182,7 +182,8 @@ public class MainWindow : Window, IDisposable
                     case 3: DrawActivitiesTab();  break;
                     case 4: DrawBarTab();          break;
                     case 5: DrawStaffTab();        break;
-                    case 6: DrawPartnersTab();     break;
+                    case 6: DrawVipTab();          break;
+                    case 7: DrawPartnersTab();     break;
                 }
             }
         }
@@ -1476,6 +1477,7 @@ public class MainWindow : Window, IDisposable
 
         var filter   = _staffSearch.Trim().ToLower();
         var filtered = _staff
+            .Where(s => !s.Role.Equals("VIP", StringComparison.OrdinalIgnoreCase))
             .Where(s =>
                 string.IsNullOrEmpty(filter) ||
                 s.CharacterName.ToLower().Contains(filter) ||
@@ -1986,6 +1988,173 @@ public class MainWindow : Window, IDisposable
         ImGui.Spacing();
         DrawItem("Mainstage Burger",  "Burger with cheese, tomato, lettuce and beef patty",  null, snackAccent);
 
+    }
+
+    private void DrawVipTab()
+    {
+        var pink = new Vector4(1f, 0.38f, 0.68f, 1f);
+
+        var vips = _staff
+            .Where(s => s.Role.Equals("VIP", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(s => s.CharacterName)
+            .ToList();
+
+        using var scroll = ImRaii.Child("VipScroll", Vector2.Zero, false);
+        if (!scroll) return;
+
+        var   dl    = ImGui.GetWindowDrawList();
+        float avail = ImGui.GetContentRegionAvail().X;
+        float lh    = ImGui.GetTextLineHeightWithSpacing();
+        float th    = ImGui.GetTextLineHeight();
+
+        // banner card — height calculated from content
+        ImGui.Dummy(new Vector2(0, 8f));
+        {
+            const float pad    = 14f;
+            const string title  = "ZONE  ALL-ACCESS PASS";
+            const string sub    = "See all benefits and perks on our website";
+            const string btnLbl = "VIEW BENEFITS";
+            const string pFrom  = "Purchase from  ";
+            const string pSep   = "  /  ";
+            const string pN1    = "Yua Tsukihana";
+            const string pN2    = "Ash Yusira";
+            var gold = new Vector4(0.95f, 0.78f, 0.30f, 1f);
+
+            var tsz   = ImGui.CalcTextSize(title);
+            var ssz   = ImGui.CalcTextSize(sub);
+            var bsz   = ImGui.CalcTextSize(btnLbl);
+            var pfSz  = ImGui.CalcTextSize(pFrom);
+            var pn1Sz = ImGui.CalcTextSize(pN1);
+            var pSepSz= ImGui.CalcTextSize(pSep);
+            var pn2Sz = ImGui.CalcTextSize(pN2);
+            float pLineW = pfSz.X + pn1Sz.X + pSepSz.X + pn2Sz.X;
+
+            float bW = bsz.X + 24f;
+            float bH = bsz.Y + 10f;
+            float banH = pad + tsz.Y + 6f + ssz.Y + 10f + th + 10f + bH + pad;
+
+            var sp = ImGui.GetCursorScreenPos();
+            var lp = ImGui.GetCursorPos();
+
+            dl.AddRectFilled(sp, sp + new Vector2(avail, banH), U(new Vector4(0.07f, 0.03f, 0.05f, 1f)), 6f);
+            dl.AddRectFilledMultiColor(sp, sp + new Vector2(avail, banH),
+                WithAlpha(U(pink), 0x22), 0x00000000, 0x00000000, WithAlpha(U(pink), 0x22));
+            dl.AddRectFilled(sp, sp + new Vector2(avail, 3f), U(pink), 6f);
+            dl.AddRect(sp, sp + new Vector2(avail, banH), WithAlpha(U(pink), 0x55), 6f, ImDrawFlags.None, 1.2f);
+
+            dl.AddText(sp + new Vector2((avail - tsz.X) * 0.5f, pad),              U(pink),  title);
+            dl.AddText(sp + new Vector2((avail - ssz.X) * 0.5f, pad + tsz.Y + 6f), U(CGrey), sub);
+
+            float pY  = pad + tsz.Y + 6f + ssz.Y + 10f;
+            float pX0 = sp.X + (avail - pLineW) * 0.5f;
+            dl.AddText(new Vector2(pX0,                                         sp.Y + pY), U(CGrey), pFrom);
+            dl.AddText(new Vector2(pX0 + pfSz.X,                                sp.Y + pY), U(gold),  pN1);
+            dl.AddText(new Vector2(pX0 + pfSz.X + pn1Sz.X,                     sp.Y + pY), U(CGrey), pSep);
+            dl.AddText(new Vector2(pX0 + pfSz.X + pn1Sz.X + pSepSz.X,         sp.Y + pY), U(gold),  pN2);
+
+            float btnOffY = pY + th + 10f;
+            ImGui.SetCursorPos(new Vector2(lp.X + (avail - bW) * 0.5f, lp.Y + btnOffY));
+            using var fr  = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 3f);
+            using var bc  = ImRaii.PushColor(ImGuiCol.Button,        new Vector4(0.35f, 0.08f, 0.20f, 1f));
+            using var bch = ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.55f, 0.12f, 0.32f, 1f));
+            using var btc = ImRaii.PushColor(ImGuiCol.Text,          new Vector4(1f, 0.38f, 0.68f, 1f));
+            if (ImGui.Button(btnLbl, new Vector2(bW, bH)))
+                Dalamud.Utility.Util.OpenLink("https://thezone.pro/#allaccess");
+
+            ImGui.SetCursorPos(new Vector2(lp.X, lp.Y + banH));
+        }
+
+        ImGui.Dummy(new Vector2(0, 12f));
+
+        // PASS HOLDERS title — same style as NOW PLAYING / ACTIVITIES on Home
+        {
+            const string txt = "PASS HOLDERS";
+            var   sz     = ImGui.CalcTextSize(txt);
+            var   sp2    = ImGui.GetCursorScreenPos();
+            float centerX = sp2.X + (avail - sz.X) * 0.5f;
+            float lineY   = sp2.Y + sz.Y * 0.5f;
+            dl.AddLine(new Vector2(sp2.X,              lineY), new Vector2(centerX - 10f,        lineY), U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+            dl.AddLine(new Vector2(centerX + sz.X + 10f, lineY), new Vector2(sp2.X + avail, lineY), U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+            dl.AddText(new Vector2(centerX, sp2.Y), U(new Vector4(0.35f, 0.35f, 0.35f, 1f)), txt);
+            ImGui.Dummy(new Vector2(avail, sz.Y + 8f));
+        }
+
+        if (vips.Count == 0)
+        {
+            var   noSp  = ImGui.GetCursorScreenPos();
+            var   noLp  = ImGui.GetCursorPos();
+            const float NH = 46f;
+            const string noTxt = "NO PASS HOLDERS REGISTERED";
+            dl.AddRectFilled(noSp, noSp + new Vector2(avail, NH), U(new Vector4(0.04f, 0.01f, 0.01f, 1f)), 3f);
+            DrawHudRect(dl, noSp, noSp + new Vector2(avail, NH), 3f, U(new Vector4(0.22f, 0.02f, 0.02f, 0.7f)), 1f);
+            var nSz = ImGui.CalcTextSize(noTxt);
+            dl.AddText(noSp + new Vector2((avail - nSz.X) * 0.5f, (NH - nSz.Y) * 0.5f), U(new Vector4(0.30f, 0.30f, 0.30f, 1f)), noTxt);
+            ImGui.SetCursorPos(noLp);
+            ImGui.Dummy(new Vector2(avail, NH));
+        }
+        else
+        {
+            float cardW = MathF.Floor((avail - 8f) / 2f);
+            const float cardH = 70f;
+            int col = 0;
+
+            foreach (var v in vips)
+            {
+                ImGui.PushID(v.Id);
+                try
+                {
+                    if (col == 1) ImGui.SameLine(cardW + 8f);
+
+                    using var vbg     = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0.07f, 0.03f, 0.05f, 1f));
+                    using var vborder = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
+                    using (var card = ImRaii.Child($"vip{v.Id}", new Vector2(cardW, cardH), false))
+                    {
+                        if (card)
+                        {
+                            var cdl = ImGui.GetWindowDrawList();
+                            var cp  = ImGui.GetWindowPos();
+                            var csz = ImGui.GetWindowSize();
+
+                            // gradient wash
+                            cdl.AddRectFilledMultiColor(cp, cp + csz,
+                                WithAlpha(U(pink), 0x22), WithAlpha(U(pink), 0x22),
+                                0x00000000, 0x00000000);
+                            // top accent line
+                            cdl.AddRectFilled(cp, cp + new Vector2(csz.X, 2f), WithAlpha(U(pink), 0xCC));
+                            // border
+                            cdl.AddRect(cp + Vector2.One, cp + csz - Vector2.One, WithAlpha(U(pink), 0x44), 3f);
+
+                            // name centered
+                            var gold2    = new Vector4(0.95f, 0.78f, 0.30f, 1f);
+                            string priceStr = v.VipPrice.HasValue
+                                ? $"Contributed {v.VipPrice.Value:N0} Gil"
+                                : "";
+                            bool hasPrice = !string.IsNullOrEmpty(priceStr);
+
+                            var nameSz  = ImGui.CalcTextSize(v.CharacterName);
+                            var wldSz   = ImGui.CalcTextSize(v.World ?? "");
+                            var priceSz = ImGui.CalcTextSize(priceStr);
+
+                            float totalH = hasPrice ? th * 3f + 6f : th * 2f + 4f;
+                            float startY = cp.Y + (cardH - totalH) * 0.5f;
+
+                            float nameX  = cp.X + (csz.X - nameSz.X)  * 0.5f;
+                            float wldX   = cp.X + (csz.X - wldSz.X)   * 0.5f;
+                            float priceX = cp.X + (csz.X - priceSz.X) * 0.5f;
+
+                            cdl.AddText(new Vector2(nameX,  startY),              WithAlpha(U(pink), 0xFF), v.CharacterName);
+                            cdl.AddText(new Vector2(wldX,   startY + th + 3f),    U(new Vector4(0.40f, 0.40f, 0.40f, 1f)), v.World ?? "");
+                            if (hasPrice)
+                                cdl.AddText(new Vector2(priceX, startY + th * 2f + 6f), U(gold2), priceStr);
+                        }
+                    }
+                }
+                finally { ImGui.PopID(); }
+
+                col = (col + 1) % 2;
+                if (col == 0 && vips.IndexOf(v) == vips.Count - 1) ImGui.NewLine();
+            }
+        }
     }
 
     private void DrawPartnersTab()

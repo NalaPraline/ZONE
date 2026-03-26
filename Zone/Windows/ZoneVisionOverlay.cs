@@ -189,9 +189,18 @@ public class ZoneVisionOverlay : Window
 
             if (staff != null)
             {
-                string venueStr = !string.IsNullOrEmpty(staff.Venue) ? $"  ·  {staff.Venue.ToUpperInvariant()}" : "";
-                line    = $"< {staff.CharacterName.ToUpperInvariant()}  {staff.Role.ToUpperInvariant()}{venueStr} >";
-                lineCol = ParseColor(staff.Color) ?? BrRed;
+                bool isVip = staff.Role.Equals("VIP", StringComparison.OrdinalIgnoreCase);
+                if (isVip)
+                {
+                    line    = $"< {staff.CharacterName.ToUpperInvariant()}  ★ ALL-ACCESS ★ >";
+                    lineCol = new Vector4(1f, 0.38f, 0.68f, 1f);
+                }
+                else
+                {
+                    string venueStr = !string.IsNullOrEmpty(staff.Venue) ? $"  ·  {staff.Venue.ToUpperInvariant()}" : "";
+                    line    = $"< {staff.CharacterName.ToUpperInvariant()}  {staff.Role.ToUpperInvariant()}{venueStr} >";
+                    lineCol = ParseColor(staff.Color) ?? BrRed;
+                }
             }
             else
             {
