@@ -113,7 +113,7 @@ public class DatabaseService : IDisposable
 
         var day1 = new (string name, string start, string end, string twitch, string logo)[]
         {
-            ("Rey",          "17:00", "18:00", "rey_alex",      "Rey.png"),
+            ("Rey",          "17:00", "18:00", "reyalexxx",     "Rey.png"),
             ("Mochiii",      "18:00", "19:00", "dj_mochiii",    "Mochiii.png"),
             ("Khyddin",      "19:00", "20:00", "khyddin",       "Khyddin.png"),
             ("Devil Cyborg", "20:00", "21:00", "devil_cyborg",  "Devil Cyborg.png"),

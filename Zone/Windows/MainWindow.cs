@@ -922,24 +922,28 @@ public class MainWindow : Window, IDisposable
         float  toggleX     = lpx + (PW - rowW) * 0.5f;
         float  toggleY     = lpy + innerH * 0.38f - 20f;
 
-        bool inHousing = Plugin.TimeLock.IsHousingInterior;
+        bool inHousing   = Plugin.TimeLock.IsHousingInterior;
+        bool isLoggedIn  = Plugin.ClientState.IsLoggedIn;
+        bool toggleDisabled = inHousing || !isLoggedIn;
 
         ImGui.SetCursorPos(new Vector2(toggleX, toggleY));
         var toggleScreenPos = ImGui.GetCursorScreenPos();
-        if (inHousing) ImGui.BeginDisabled();
+        if (toggleDisabled) ImGui.BeginDisabled();
         if (DrawDayNightToggle(active, "##timeLock"))
             Plugin.TimeLock.SetEnabled(!active);
-        if (inHousing) ImGui.EndDisabled();
+        if (toggleDisabled) ImGui.EndDisabled();
         float labelScrX = toggleScreenPos.X + TGLW + ImGui.GetStyle().ItemSpacing.X;
         float labelScrY = toggleScreenPos.Y + 18f - ImGui.GetTextLineHeight() * 0.5f - 8f;
-        var labelCol = ImGui.ColorConvertFloat4ToU32(inHousing || !active ? CDkGrey : CBrRed);
+        var labelCol = ImGui.ColorConvertFloat4ToU32(toggleDisabled || !active ? CDkGrey : CBrRed);
         ImGui.GetWindowDrawList().AddText(new Vector2(labelScrX, labelScrY), labelCol, statusLabel);
 
-        string desc = inHousing
-            ? "Unavailable inside housing interiors."
-            : active
-                ? "Eorzea time locked to midnight. Clear skies active."
-                : "Locks Eorzea time to midnight and clears the sky.";
+        string desc = !isLoggedIn
+            ? "Unavailable on the title or character select screen."
+            : inHousing
+                ? "Unavailable inside housing interiors."
+                : active
+                    ? "Eorzea time locked to midnight. Clear skies active."
+                    : "Locks Eorzea time to midnight and clears the sky.";
         float  descW  = ImGui.CalcTextSize(desc).X;
         const float DM = 20f;
         float  descX  = lpx + MathF.Max((PW - descW) * 0.5f, DM);

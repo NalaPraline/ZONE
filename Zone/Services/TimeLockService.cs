@@ -55,6 +55,7 @@ public sealed class TimeLockService : IDisposable
 
     public void SetEnabled(bool enabled)
     {
+        if (enabled && !Plugin.ClientState.IsLoggedIn) return;
         if (enabled && IsHousingInterior) return;
         if (enabled == _applied) return;
 
