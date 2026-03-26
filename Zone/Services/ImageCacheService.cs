@@ -16,7 +16,7 @@ public class ImageCacheService : IDisposable
 
     private static readonly string[] DjLogoFiles =
     [
-        "Khyddin.png", "Mochiii.png", "Devil Cyborg.png", "Khangomon.png",
+        "Rey.png", "Khyddin.png", "Mochiii.png", "Devil Cyborg.png",
         "8bit.png", "Cynaxia.png", "raindrop.png", "skytex.png", "SwayWave.png",
         "Rin.png", "Leysy.png", "Elana.png", "Swordmaid.png", "Gaia.png",
         "Miyu Fhey.png", "Aemilia.png", "swage.png", "Schoki.png"
