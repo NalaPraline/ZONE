@@ -357,7 +357,7 @@ public class MainWindow : Window, IDisposable
 
             if (pre)
             {
-                line1 = "LIGHT  ·  RAIDEN  ·  SHIROGANE";
+                line1 = "LIGHT  ·  RAIDEN  ·  SHIROGANE  ·  WARD 1";
                 line2 = "BY THE BEACH";
                 col1  = U(CWhite);
             }
@@ -635,8 +635,7 @@ public class MainWindow : Window, IDisposable
 
         var   startPos = ImGui.GetCursorPos();
         var   sp       = ImGui.GetCursorScreenPos();
-        const float H      = 62f;
-        const float btnW   = 88f;
+        const float H      = 84f;
         const float btnH   = 20f;
         const float btnGap = 4f;
         float sectionW = availW / 3f;
@@ -652,36 +651,40 @@ public class MainWindow : Window, IDisposable
             dl.AddLine(sp + new Vector2(sectionW * i, 10f), sp + new Vector2(sectionW * i, H - 10f),
                        U(new Vector4(0.30f, 0.03f, 0.03f, 0.8f)), 1f);
 
-        var syncs = new (string name, string id, string pass, string uid)[]
+        var syncs = new (string name, string id, string pass, string repo, string uid)[]
         {
-            ("LIGHTLESS", LightlessId,  LightlessPass,  "sLS"),
-            ("RAVA",      RavaId,       RavaPass,        "sRV"),
-            ("PLAYERSYNC",PlayerSyncId, PlayerSyncPass,  "sPS"),
+            ("LIGHTLESS",  LightlessId,  LightlessPass,  "https://repo.lightless-sync.org/",                           "sLS"),
+            ("RAVA",       RavaId,       RavaPass,        "https://plugins.ravalyn.uk/RavaSync.json",                   "sRV"),
+            ("PLAYERSYNC", PlayerSyncId, PlayerSyncPass,  "https://playersync.io/download/plugin/repo.json",            "sPS"),
         };
 
         float lh = ImGui.GetTextLineHeight();
 
         for (int i = 0; i < syncs.Length; i++)
         {
-            var (name, id, pass, uid) = syncs[i];
+            var (name, id, pass, repo, uid) = syncs[i];
             float secX = sp.X + sectionW * i;
             float textX = secX + 12f;
 
-            // Name label
-            dl.AddText(new Vector2(textX, sp.Y + 10f),
-                       U(new Vector4(0.38f, 0.38f, 0.38f, 1f)), name);
+            // Center the whole block (name + 2 rows of buttons) vertically
+            float bxLeft  = secX + 10f;
+            float bxRight = secX + sectionW - 10f;
+            float bw2     = (bxRight - bxLeft - btnGap) * 0.5f;
+            float bwRepo  = bxRight - bxLeft;
+            float blockH  = lh + 6f + btnH + btnGap + btnH;
+            float blockY  = sp.Y + (H - blockH) * 0.5f;
 
-            // ID value
-            dl.AddText(new Vector2(textX, sp.Y + 10f + lh + 2f),
-                       U(new Vector4(0.65f, 0.65f, 0.65f, 1f)), id);
+            // Name centered
+            var nameSz = ImGui.CalcTextSize(name);
+            dl.AddText(new Vector2(secX + (sectionW - nameSz.X) * 0.5f, blockY),
+                       U(new Vector4(0.50f, 0.50f, 0.50f, 1f)), name);
 
-            // Buttons on the right side of each section
-            float bx = secX + sectionW - btnW - 10f;
-            float by1 = sp.Y + (H * 0.5f) - btnH - btnGap * 0.5f;
+            float by1 = blockY + lh + 6f;
             float by2 = by1 + btnH + btnGap;
 
-            ImGui.SetCursorScreenPos(new Vector2(bx, by1));
-            ImGui.InvisibleButton($"##ci{uid}", new Vector2(btnW, btnH));
+            // COPY ID
+            ImGui.SetCursorScreenPos(new Vector2(bxLeft, by1));
+            ImGui.InvisibleButton($"##ci{uid}", new Vector2(bw2, btnH));
             bool hovCI = ImGui.IsItemHovered();
             var ciMin = ImGui.GetItemRectMin(); var ciMax = ImGui.GetItemRectMax();
             dl.AddRectFilled(ciMin, ciMax, hovCI ? U(new Vector4(0.20f, 0.03f, 0.03f, 1f)) : U(new Vector4(0.09f, 0.02f, 0.02f, 1f)), 2f);
@@ -690,8 +693,9 @@ public class MainWindow : Window, IDisposable
             dl.AddText((ciMin + ciMax) * 0.5f - ciTxt * 0.5f, hovCI ? 0xFFFFFFFF : U(CGrey), "COPY ID");
             if (ImGui.IsItemClicked()) ImGui.SetClipboardText(id);
 
-            ImGui.SetCursorScreenPos(new Vector2(bx, by2));
-            ImGui.InvisibleButton($"##cp{uid}", new Vector2(btnW, btnH));
+            // COPY PASS
+            ImGui.SetCursorScreenPos(new Vector2(bxLeft + bw2 + btnGap, by1));
+            ImGui.InvisibleButton($"##cp{uid}", new Vector2(bw2, btnH));
             bool hovCP = ImGui.IsItemHovered();
             var cpMin = ImGui.GetItemRectMin(); var cpMax = ImGui.GetItemRectMax();
             dl.AddRectFilled(cpMin, cpMax, hovCP ? U(new Vector4(0.20f, 0.03f, 0.03f, 1f)) : U(new Vector4(0.09f, 0.02f, 0.02f, 1f)), 2f);
@@ -699,6 +703,17 @@ public class MainWindow : Window, IDisposable
             var cpTxt = ImGui.CalcTextSize("COPY PASS");
             dl.AddText((cpMin + cpMax) * 0.5f - cpTxt * 0.5f, hovCP ? 0xFFFFFFFF : U(CGrey), "COPY PASS");
             if (ImGui.IsItemClicked()) ImGui.SetClipboardText(pass);
+
+            // COPY REPO (full width)
+            ImGui.SetCursorScreenPos(new Vector2(bxLeft, by2));
+            ImGui.InvisibleButton($"##cr{uid}", new Vector2(bwRepo, btnH));
+            bool hovCR = ImGui.IsItemHovered();
+            var crMin = ImGui.GetItemRectMin(); var crMax = ImGui.GetItemRectMax();
+            dl.AddRectFilled(crMin, crMax, hovCR ? U(new Vector4(0.20f, 0.03f, 0.03f, 1f)) : U(new Vector4(0.09f, 0.02f, 0.02f, 1f)), 2f);
+            dl.AddRect(crMin, crMax, hovCR ? U(CBrRed) : U(new Vector4(0.35f, 0.04f, 0.04f, 0.9f)), 2f, ImDrawFlags.None, 1f);
+            var crTxt = ImGui.CalcTextSize("COPY REPO");
+            dl.AddText((crMin + crMax) * 0.5f - crTxt * 0.5f, hovCR ? 0xFFFFFFFF : U(CGrey), "COPY REPO");
+            if (ImGui.IsItemClicked()) ImGui.SetClipboardText(repo);
         }
 
         ImGui.SetCursorPos(startPos);
@@ -775,9 +790,9 @@ public class MainWindow : Window, IDisposable
             Plugin.Notifications.AddNotification(new Dalamud.Interface.ImGuiNotification.Notification
             {
                 Title           = "ZONE",
-                Content         = "Lifestream is not installed or unavailable.",
+                Content         = "Lifestream is not installed or unavailable.\nInstall it from: github.com/NightmareXIV/Lifestream",
                 Type            = Dalamud.Interface.ImGuiNotification.NotificationType.Warning,
-                InitialDuration = TimeSpan.FromSeconds(4)
+                InitialDuration = TimeSpan.FromSeconds(8)
             });
         }
     }

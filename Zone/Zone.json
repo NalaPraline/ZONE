@@ -6,5 +6,5 @@
   "ApplicableVersion": "any",
   "Tags": ["venue", "nightclub", "schedule", "dj", "event", "zone"],
   "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png",
-  "Changelog": "1.2.8\n- Fixed staff online detection checking world to avoid false positives\n- Added overlay corner setting (top left, top right, bottom left, bottom right)\n- Activity updates and UI fixes\n- Overlay pin button and housing lock"
+  "Changelog": "1.2.9\n- Added copy repo buttons to each syncshell\n- UI layout fixes\n- Lifestream install hint when not available\n- Ward 1 added to location display"
 }
