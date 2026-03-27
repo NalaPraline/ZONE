@@ -338,10 +338,11 @@ public class MainWindow : Window, IDisposable
 
     private void DrawHomeTab(float outerW)
     {
-        var now    = DateTime.UtcNow;
-        var day1   = new DateTime(2026, 3, 27);
-        var day2   = new DateTime(2026, 3, 28);
-        int? evDay = CurrentEventDay();
+        var now     = DateTime.UtcNow;
+        var day1    = new DateTime(2026, 3, 27);
+        var day2    = new DateTime(2026, 3, 28);
+        var adjDate = now.Hour < 3 ? now.Date.AddDays(-1) : now.Date;
+        int? evDay  = CurrentEventDay();
 
         float availW = ImGui.GetContentRegionAvail().X;
 
@@ -351,7 +352,7 @@ public class MainWindow : Window, IDisposable
         var dl = ImGui.GetWindowDrawList();
 
         {
-            bool pre  = now.Date < day1;
+            bool pre  = adjDate < day1;
             bool isEv = evDay.HasValue;
 
             string line1, line2;
@@ -530,7 +531,7 @@ public class MainWindow : Window, IDisposable
                 ? actsToday.FindAll(a => IsActivityActive(a.StartTime, nowMin))
                 : new List<Zone.Models.Activity>();
 
-            bool postEvent = !evDay.HasValue && now.Date >= day1;
+            bool postEvent = !evDay.HasValue && adjDate >= day1;
             if (active.Count == 0 || postEvent)
             {
                 var   noActSp  = ImGui.GetCursorScreenPos();
