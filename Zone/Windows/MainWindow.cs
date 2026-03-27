@@ -137,7 +137,7 @@ public class MainWindow : Window, IDisposable
 
     private void DrawInternal()
     {
-        if (_forceRefresh || (DateTime.Now - _dataRefreshed).TotalSeconds > 30)
+        if (_forceRefresh || (DateTime.Now - _dataRefreshed).TotalSeconds > 5)
             RefreshData();
 
         var onlinePlayers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

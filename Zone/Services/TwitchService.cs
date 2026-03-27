@@ -10,9 +10,11 @@ public class TwitchService : IDisposable
 {
     private static readonly HttpClient Http = new();
     private const string WorkerUrl = "https://zone-api.yunookami.workers.dev/twitch-status";
-    private const double CheckIntervalSeconds = 60.0;
+    private const double CheckIntervalSeconds = 15.0;
 
-    private DateTime _lastCheck = DateTime.MinValue;
+    private DateTime _lastCheck   = DateTime.MinValue;
+    private DateTime _lastLiveAt  = DateTime.MinValue;
+    private const double MinLiveHoldSeconds = 120.0;
 
     private static readonly DateTime[] EventDates =
     {
@@ -69,7 +71,15 @@ public class TwitchService : IDisposable
                 }
             }
 
-            Plugin.Db.SetLivePerformance(liveId);
+            if (liveId > 0)
+            {
+                _lastLiveAt = DateTime.UtcNow;
+                Plugin.Db.SetLivePerformance(liveId);
+            }
+            else if ((DateTime.UtcNow - _lastLiveAt).TotalSeconds >= MinLiveHoldSeconds)
+            {
+                Plugin.Db.SetLivePerformance(0);
+            }
         }
         catch (Exception ex)
         {
