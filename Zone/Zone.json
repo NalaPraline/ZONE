@@ -6,5 +6,5 @@
   "ApplicableVersion": "any",
   "Tags": ["venue", "nightclub", "schedule", "dj", "event", "zone"],
   "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png",
-  "Changelog": "1.2.27\n- Fix live DJ display and notifications filtering by event day"
+  "Changelog": "1.2.28\n- Fix DJ live detection to only show within scheduled time window"
 }

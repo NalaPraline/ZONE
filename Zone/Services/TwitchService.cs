@@ -51,13 +51,13 @@ public class TwitchService : IDisposable
                 if (string.IsNullOrEmpty(p.TwitchLogin)) continue;
                 if (p.Day != evDay) continue;
 
-                // Ignore DJs whose set is already over
-                if (TimeSpan.TryParse(p.EndTime, out var endT))
+                // Ignore DJs whose set hasn't started or is already over
+                if (TimeSpan.TryParse(p.StartTime, out var startT) && TimeSpan.TryParse(p.EndTime, out var endT))
                 {
-                    // Handle sets that go past midnight (e.g. 23:00 - 00:00)
-                    var adjustedEnd = endT < TimeSpan.FromHours(3) ? endT.Add(TimeSpan.FromHours(24)) : endT;
-                    var adjustedNow = now < TimeSpan.FromHours(3) ? now.Add(TimeSpan.FromHours(24)) : now;
-                    if (adjustedNow > adjustedEnd) continue;
+                    var adjustedStart = startT < TimeSpan.FromHours(3) ? startT.Add(TimeSpan.FromHours(24)) : startT;
+                    var adjustedEnd   = endT   < TimeSpan.FromHours(3) ? endT.Add(TimeSpan.FromHours(24))   : endT;
+                    var adjustedNow   = now    < TimeSpan.FromHours(3) ? now.Add(TimeSpan.FromHours(24))     : now;
+                    if (adjustedNow < adjustedStart || adjustedNow > adjustedEnd) continue;
                 }
 
                 var json = await Http.GetStringAsync($"{WorkerUrl}?channel={p.TwitchLogin}");
