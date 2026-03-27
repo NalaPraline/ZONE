@@ -1996,7 +1996,8 @@ public class MainWindow : Window, IDisposable
 
         var vips = _staff
             .Where(s => s.Role.Equals("VIP", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(s => s.CharacterName)
+            .OrderByDescending(s => s.VipPrice ?? 0)
+            .ThenBy(s => s.CharacterName)
             .ToList();
 
         using var scroll = ImRaii.Child("VipScroll", Vector2.Zero, false);
