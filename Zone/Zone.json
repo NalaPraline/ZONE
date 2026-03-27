@@ -6,5 +6,5 @@
   "ApplicableVersion": "any",
   "Tags": ["venue", "nightclub", "schedule", "dj", "event", "zone"],
   "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png",
-  "Changelog": "1.2.22\n- Updated bingo hosts"
+  "Changelog": "1.2.23\n- Show venue address on home banner during event"
 }

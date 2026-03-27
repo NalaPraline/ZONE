@@ -355,8 +355,9 @@ public class MainWindow : Window, IDisposable
             bool pre  = adjDate < day1;
             bool isEv = evDay.HasValue;
 
-            string line1, line2;
-            uint   col1;
+            string  line1, line2;
+            string? line3 = null;
+            uint    col1;
 
             if (pre)
             {
@@ -368,6 +369,7 @@ public class MainWindow : Window, IDisposable
             {
                 line1 = $"DAY {evDay} — IN PROGRESS";
                 line2 = evDay == 1 ? "MARCH 27, 2026" : "MARCH 28, 2026";
+                line3 = "LIGHT  ·  RAIDEN  ·  SHIROGANE  ·  WARD 1";
                 col1  = U(CRed);
             }
             else
@@ -378,7 +380,7 @@ public class MainWindow : Window, IDisposable
             }
 
             var sp = ImGui.GetCursorScreenPos();
-            const float H = 54f;
+            float H = line3 != null ? 70f : 54f;
 
             // Reserve space first so cursor lands correctly after the banner
             ImGui.Dummy(new Vector2(availW, H));
@@ -387,13 +389,20 @@ public class MainWindow : Window, IDisposable
             dl.AddRectFilled(sp, sp + new Vector2(availW, H), U(new Vector4(0.05f, 0.01f, 0.01f, 1f)));
             if (isEv) dl.AddRectFilled(sp, sp + new Vector2(3f, H), U(CRed));
 
-            var  s1 = ImGui.CalcTextSize(line1);
-            var  s2 = ImGui.CalcTextSize(line2);
-            float ty  = sp.Y + (H - s1.Y - 4f - s2.Y) * 0.5f;
+            var  s1   = ImGui.CalcTextSize(line1);
+            var  s2   = ImGui.CalcTextSize(line2);
+            var  s3   = line3 != null ? ImGui.CalcTextSize(line3) : Vector2.Zero;
+            float totalH = s1.Y + 4f + s2.Y + (line3 != null ? 3f + s3.Y : 0f);
+            float ty  = sp.Y + (H - totalH) * 0.5f;
             float tx1 = sp.X + (availW - s1.X) * 0.5f;
             float tx2 = sp.X + (availW - s2.X) * 0.5f;
-            dl.AddText(new Vector2(tx1, ty),           col1,      line1);
+            dl.AddText(new Vector2(tx1, ty),             col1,        line1);
             dl.AddText(new Vector2(tx2, ty + s1.Y + 4f), U(CDkGrey), line2);
+            if (line3 != null)
+            {
+                float tx3 = sp.X + (availW - s3.X) * 0.5f;
+                dl.AddText(new Vector2(tx3, ty + s1.Y + 4f + s2.Y + 3f), U(CDkGrey), line3);
+            }
 
             if (pre)
             {
