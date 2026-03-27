@@ -547,7 +547,7 @@ public class MainWindow : Window, IDisposable
                 var   startNA  = ImGui.GetCursorPos();
                 const float NAH = 46f;
                 string noActTxt = postEvent ? "EVENT CONCLUDED" :
-                                  evDay.HasValue && now.TimeOfDay < TimeSpan.FromHours(17) ? "ACTIVITIES START AT 17:00 ST" : "NO ACTIVITY IN PROGRESS";
+                                  evDay.HasValue && now.Hour >= 3 && now.Hour < 17 ? "ACTIVITIES START AT 17:00 ST" : "NO ACTIVITY IN PROGRESS";
                 dl.AddRectFilled(noActSp, noActSp + new Vector2(availW, NAH), U(new Vector4(0.04f, 0.01f, 0.01f, 1f)), 3f);
                 DrawHudRect(dl, noActSp, noActSp + new Vector2(availW, NAH), 3f, U(new Vector4(0.22f, 0.02f, 0.02f, 0.7f)), 1f);
                 var naSz = ImGui.CalcTextSize(noActTxt);
@@ -1003,7 +1003,8 @@ public class MainWindow : Window, IDisposable
             ImGui.PushID(p.Id);
             try
             {
-                bool isPast    = isEventDay && EventMinutes(now.ToString("HH:mm")) >= EventMinutes(p.EndTime);
+                bool isPast    = adjDate2 > eventDate ||
+                                 (isEventDay && EventMinutes(now.ToString("HH:mm")) >= EventMinutes(p.EndTime));
                 bool showAsLive = p.IsLive && isEventDay;
 
                 using var alpha  = ImRaii.PushStyle(ImGuiStyleVar.Alpha, 0.38f, isPast);
