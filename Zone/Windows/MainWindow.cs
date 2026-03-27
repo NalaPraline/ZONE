@@ -985,12 +985,12 @@ public class MainWindow : Window, IDisposable
         if (!scroll) return;
 
         var now = DateTime.UtcNow;
-        var today2 = now.Date;
+        var adjDate2 = now.Hour < 3 ? now.Date.AddDays(-1) : now.Date;
         // Day 1 = 27 March, Day 2 = 28 March
         var eventDate = _lineupDay == 1
             ? new DateTime(2026, 3, 27)
             : new DateTime(2026, 3, 28);
-        bool isEventDay = today2 == eventDate;
+        bool isEventDay = adjDate2 == eventDate;
 
         const float cardH = 96f;
         const float imgSz = 72f;
@@ -1002,7 +1002,7 @@ public class MainWindow : Window, IDisposable
             ImGui.PushID(p.Id);
             try
             {
-                bool isPast = isEventDay && TimeSpan.TryParse(p.EndTime, out var endT) && endT < now.TimeOfDay;
+                bool isPast = isEventDay && EventMinutes(now.ToString("HH:mm")) >= EventMinutes(p.EndTime);
 
                 using var alpha  = ImRaii.PushStyle(ImGuiStyleVar.Alpha, 0.38f, isPast);
                 using var bg     = ImRaii.PushColor(ImGuiCol.ChildBg, p.IsLive
@@ -1646,7 +1646,7 @@ public class MainWindow : Window, IDisposable
     {
         if (!TimeSpan.TryParse(t, out var ts)) return 0;
         int m = (int)ts.TotalMinutes;
-        return m < 720 ? m + 1440 : m;
+        return m < 180 ? m + 1440 : m;
     }
 
     private static int RoleOrder(string role) => role switch
