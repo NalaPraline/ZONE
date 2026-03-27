@@ -535,7 +535,7 @@ public class MainWindow : Window, IDisposable
             dl.AddText(new Vector2(acX, acSp.Y), U(new Vector4(0.35f, 0.35f, 0.35f, 1f)), acTxt);
             ImGui.Dummy(new Vector2(availW, acSz.Y + 6f));
 
-            int  nowMin = EventMinutes(now.ToString("HH:mm"));
+            int  nowMin = EventMinutes(now.Hour.ToString("D2") + ":" + now.Minute.ToString("D2"));
             var  active = evDay.HasValue
                 ? actsToday.FindAll(a => IsActivityActive(a.StartTime, nowMin))
                 : new List<Zone.Models.Activity>();
