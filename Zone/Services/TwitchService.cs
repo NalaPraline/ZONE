@@ -35,21 +35,28 @@ public class TwitchService : IDisposable
     {
         try
         {
+            var utcNow  = DateTime.UtcNow;
+            var adjDate = utcNow.Hour < 3 ? utcNow.Date.AddDays(-1) : utcNow.Date;
+            int? evDay  = adjDate == new DateTime(2026, 3, 27) ? 1
+                        : adjDate == new DateTime(2026, 3, 28) ? 2
+                        : (int?)null;
+
             var performances = Plugin.Db.GetAllPerformances();
             int liveId = 0;
 
-            var now = DateTime.UtcNow.TimeOfDay;
+            var now = utcNow.TimeOfDay;
 
             foreach (var p in performances)
             {
                 if (string.IsNullOrEmpty(p.TwitchLogin)) continue;
+                if (p.Day != evDay) continue;
 
                 // Ignore DJs whose set is already over
                 if (TimeSpan.TryParse(p.EndTime, out var endT))
                 {
                     // Handle sets that go past midnight (e.g. 23:00 - 00:00)
-                    var adjustedEnd = endT < TimeSpan.FromHours(6) ? endT.Add(TimeSpan.FromHours(24)) : endT;
-                    var adjustedNow = now < TimeSpan.FromHours(6) ? now.Add(TimeSpan.FromHours(24)) : now;
+                    var adjustedEnd = endT < TimeSpan.FromHours(3) ? endT.Add(TimeSpan.FromHours(24)) : endT;
+                    var adjustedNow = now < TimeSpan.FromHours(3) ? now.Add(TimeSpan.FromHours(24)) : now;
                     if (adjustedNow > adjustedEnd) continue;
                 }
 

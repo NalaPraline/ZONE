@@ -480,7 +480,7 @@ public class MainWindow : Window, IDisposable
         ImGui.Spacing();
 
         // Only consider a DJ live during actual event days
-        var live = evDay.HasValue ? _performances.Find(p => p.IsLive) : null;
+        var live = evDay.HasValue ? _performances.Find(p => p.IsLive && p.Day == evDay) : null;
 
         {
             // NOW PLAYING title with lines
@@ -967,7 +967,8 @@ public class MainWindow : Window, IDisposable
 
     private void DrawLineupTab()
     {
-        var live = _performances.Find(p => p.IsLive);
+        int? evDayL = CurrentEventDay();
+        var live = evDayL.HasValue ? _performances.Find(p => p.IsLive && p.Day == evDayL) : null;
         if (live != null)
         {
             ImGui.Spacing();
@@ -1002,10 +1003,11 @@ public class MainWindow : Window, IDisposable
             ImGui.PushID(p.Id);
             try
             {
-                bool isPast = isEventDay && EventMinutes(now.ToString("HH:mm")) >= EventMinutes(p.EndTime);
+                bool isPast    = isEventDay && EventMinutes(now.ToString("HH:mm")) >= EventMinutes(p.EndTime);
+                bool showAsLive = p.IsLive && isEventDay;
 
                 using var alpha  = ImRaii.PushStyle(ImGuiStyleVar.Alpha, 0.38f, isPast);
-                using var bg     = ImRaii.PushColor(ImGuiCol.ChildBg, p.IsLive
+                using var bg     = ImRaii.PushColor(ImGuiCol.ChildBg, showAsLive
                     ? new Vector4(0.10f, 0.01f, 0.01f, 1f)
                     : new Vector4(0.07f, 0.07f, 0.07f, 1f));
                 using var border = ImRaii.PushStyle(ImGuiStyleVar.ChildBorderSize, 0f);
@@ -1018,9 +1020,9 @@ public class MainWindow : Window, IDisposable
                         var cpos = ImGui.GetWindowPos();
                         var csz  = ImGui.GetWindowSize();
 
-                        uint frameCol = p.IsLive ? U(CRed) : U(new Vector4(0.28f, 0f, 0f, 0.9f));
+                        uint frameCol = showAsLive ? U(CRed) : U(new Vector4(0.28f, 0f, 0f, 0.9f));
                         DrawHudRect(cdl, cpos + new Vector2(1, 1), cpos + csz - new Vector2(1, 1),
-                                    8f, frameCol, p.IsLive ? 1.5f : 1f, glow: p.IsLive);
+                                    8f, frameCol, showAsLive ? 1.5f : 1f, glow: showAsLive);
 
                         ImGui.SetCursorPos(new Vector2(imgPad, (cardH - imgSz) / 2f));
                         DrawTextureOrPlaceholder(p.LogoPath, new Vector2(imgSz, imgSz));
@@ -1034,7 +1036,7 @@ public class MainWindow : Window, IDisposable
                         ImGui.SetCursorPos(new Vector2(textX, textStartY + lineH));
                         ImGui.TextColored(CDkGrey, $"{p.StartTime} - {p.EndTime}  ·  ST");
 
-                        if (p.IsLive)
+                        if (showAsLive)
                         {
                             ImGui.SameLine();
                             float a = (float)(Math.Sin(ImGui.GetTime() * 4) * 0.5 + 0.5);

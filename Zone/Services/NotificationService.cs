@@ -27,19 +27,17 @@ public class NotificationService
         var live = Plugin.Db.GetLivePerformance();
         var currentId = live?.Id ?? 0;
 
+        if (live == null) return;
         if (currentId == config.LastSeenDjId) return;
 
-        if (live != null)
+        Plugin.Notifications.AddNotification(new Notification
         {
-            Plugin.Notifications.AddNotification(new Notification
-            {
-                Title = "ZONE — Now Live",
-                Content = $"DJ {live.DjName} is on stage!",
-                Type = NotificationType.Info,
-                InitialDuration = TimeSpan.FromSeconds(6),
-                Minimized = false
-            });
-        }
+            Title = "ZONE — Now Live",
+            Content = $"DJ {live.DjName} is on stage!",
+            Type = NotificationType.Info,
+            InitialDuration = TimeSpan.FromSeconds(6),
+            Minimized = false
+        });
 
         config.LastSeenDjId = currentId;
         Plugin.Db.SaveConfig(config);
@@ -50,8 +48,15 @@ public class NotificationService
         var config = Plugin.Db.GetConfig();
         if (!config.NotificationsEnabled) return;
 
-        var now = DateTime.Now.TimeOfDay;
-        var activities = Plugin.Db.GetAllActivities();
+        var utcNow  = DateTime.UtcNow;
+        var adjDate = utcNow.Hour < 3 ? utcNow.Date.AddDays(-1) : utcNow.Date;
+        int? evDay  = adjDate == new DateTime(2026, 3, 27) ? 1
+                    : adjDate == new DateTime(2026, 3, 28) ? 2
+                    : (int?)null;
+        if (evDay == null) return;
+
+        var now        = utcNow.TimeOfDay;
+        var activities = Plugin.Db.GetAllActivities().FindAll(a => a.Day == evDay);
 
         foreach (var activity in activities)
         {
