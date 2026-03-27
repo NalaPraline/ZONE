@@ -37,7 +37,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static ZoneVisionOverlay   Overlay       { get; private set; } = null!;
 
     private DateTime _lastStaffSync = DateTime.Now;
-    private const double StaffSyncIntervalMinutes = 5.0;
+    private const double StaffSyncIntervalMinutes = 1.0;
 
     private readonly TimeLockService     _timeLock;
     private readonly NotificationService _notifications;
