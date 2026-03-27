@@ -88,6 +88,8 @@ public class ZoneVisionOverlay : Window
 
     private void DrawContent()
     {
+        ImGui.SetWindowFontScale(1.0f / ImGui.GetIO().FontGlobalScale);
+
         var dl   = ImGui.GetWindowDrawList();
         var wpos = ImGui.GetWindowPos();
 
