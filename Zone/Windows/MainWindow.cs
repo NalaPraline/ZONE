@@ -1437,7 +1437,7 @@ public class MainWindow : Window, IDisposable
                 using var btnColHov = ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.14f, 0.07f, 0.24f, 1f));
                 using var btnColAct = ImRaii.PushColor(ImGuiCol.ButtonActive,  new Vector4(0.18f, 0.09f, 0.30f, 1f));
                 using var txtCol    = ImRaii.PushColor(ImGuiCol.Text, new Vector4(0.72f, 0.51f, 1f, 1f));
-                if (ImGui.Button("CONTACT ON DISCORD", new Vector2(btnW, 0f)))
+                if (ImGui.Button("JOIN DISCORD", new Vector2(btnW, 0f)))
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_detailsActivity.ContactUrl) { UseShellExecute = true });
             }
         }

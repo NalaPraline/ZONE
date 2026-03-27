@@ -28,7 +28,8 @@ public class ImageCacheService : IDisposable
         "Clubbers LS.png", "Habitat.png", "Gipsy Cat.png", "Desert Rose.png",
         "Moonlit Kiss.png", "Selune.png", "Prism.png", "Tempest.png", "Woah.png",
         "Black Sapphire.png", "Ignite.png", "Eden.png", "The Beat.png", "Nedori.png",
-        "Church of Metal.png", "Psyko NightClub.png", "L'Atelier des Saveurs.png"
+        "Church of Metal.png", "Psyko NightClub.png", "L'Atelier des Saveurs.png",
+        "Eclipse Horizon.png", "Untamed.png"
     ];
 
     public ImageCacheService()
