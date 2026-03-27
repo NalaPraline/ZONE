@@ -367,7 +367,7 @@ public class MainWindow : Window, IDisposable
             }
             else if (isEv)
             {
-                line1 = $"DAY {evDay} — IN PROGRESS";
+                line1 = $"DAY {evDay} IN PROGRESS";
                 line2 = evDay == 1 ? "MARCH 27, 2026" : "MARCH 28, 2026";
                 line3 = "LIGHT  ·  RAIDEN  ·  SHIROGANE  ·  WARD 1";
                 col1  = U(CRed);
