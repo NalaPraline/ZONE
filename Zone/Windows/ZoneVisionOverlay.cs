@@ -157,7 +157,7 @@ public class ZoneVisionOverlay : Window
             var dot = "● ";
             ImGui.TextColored(new Vector4(1f, 0.1f, 0.1f, blink), dot);
             ImGui.SameLine(0f, 0f);
-            ImGui.TextColored(White, $"DJS {live.DjName.ToUpperInvariant()}");
+            ImGui.TextColored(White, $"DJ {live.DjName.ToUpperInvariant()}");
             ImGui.SetWindowFontScale(1.0f);
         }
         else

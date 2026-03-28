@@ -62,12 +62,19 @@ public class TwitchService : IDisposable
                     if (adjustedNow < adjustedStart || adjustedNow > adjustedEnd) continue;
                 }
 
-                var json = await Http.GetStringAsync($"{WorkerUrl}?channel={p.TwitchLogin}");
-                var data = JsonSerializer.Deserialize<TwitchStatusResponse>(json);
-                if (data?.IsLive == true)
+                try
                 {
-                    liveId = p.Id;
-                    break;
+                    var json = await Http.GetStringAsync($"{WorkerUrl}?channel={p.TwitchLogin}");
+                    var data = JsonSerializer.Deserialize<TwitchStatusResponse>(json);
+                    if (data?.IsLive == true)
+                    {
+                        liveId = p.Id;
+                        break;
+                    }
+                }
+                catch
+                {
+                    // Worker unavailable — treat as not live, fall through to hold logic
                 }
             }
 

@@ -6,5 +6,5 @@
   "ApplicableVersion": "any",
   "Tags": ["venue", "nightclub", "schedule", "dj", "event", "zone"],
   "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png",
-  "Changelog": "1.2.33\n- Fix activities not showing in Home tab for users with non-English system locale"
+  "Changelog": "1.2.34\n- Fix Zone Vision HUD showing DJS instead of DJ"
 }
