@@ -147,7 +147,10 @@ public class ZoneVisionOverlay : Window
 
         ImGui.Separator();
 
-        var live = Plugin.Db.GetLivePerformance();
+        var   _now3    = DateTime.UtcNow;
+        var   _adj3    = _now3.Hour < 3 ? _now3.Date.AddDays(-1) : _now3.Date;
+        bool  _isEvDay = _adj3 == new DateTime(2026, 3, 27) || _adj3 == new DateTime(2026, 3, 28);
+        var live = _isEvDay ? Plugin.Db.GetLivePerformance() : null;
 
         if (live != null)
         {
@@ -162,8 +165,23 @@ public class ZoneVisionOverlay : Window
         }
         else
         {
+            var   now2    = DateTime.UtcNow;
+            var   adj2    = now2.Hour < 3 ? now2.Date.AddDays(-1) : now2.Date;
+            bool  postEv2 = adj2 >= new DateTime(2026, 3, 27);
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 6f);
-            ImGui.TextColored(White, "● NO LIVE DJ");
+            ImGui.TextColored(Grey, postEv2 ? "● EVENT CONCLUDED" : "● NO LIVE DJ");
+            if (postEv2)
+            {
+                ImGui.SameLine();
+                float credW = 80f;
+                ImGui.SetCursorPosX(W - credW - 12f);
+                ImGui.PushStyleColor(ImGuiCol.Button,        new Vector4(0.50f, 0f, 0f, 0.85f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.75f, 0f, 0f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(1f, 0.1f, 0.1f, 1f));
+                if (ImGui.Button("CREDITS", new Vector2(credW, 22f)))
+                    Plugin.Credits.IsOpen = !Plugin.Credits.IsOpen;
+                ImGui.PopStyleColor(3);
+            }
         }
 
         ImGui.Separator();

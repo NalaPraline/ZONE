@@ -6,5 +6,5 @@
   "ApplicableVersion": "any",
   "Tags": ["venue", "nightclub", "schedule", "dj", "event", "zone"],
   "IconUrl": "https://raw.githubusercontent.com/NalaPraline/ZONE/main/Zone/Data/icon.png",
-  "Changelog": "1.2.34\n- Fix Zone Vision HUD showing DJS instead of DJ"
+  "Changelog": "1.2.35\n- Final update for ZONE 2026 — thank you to everyone who attended"
 }

@@ -35,6 +35,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static AnnouncementService  Announcements { get; private set; } = null!;
     internal static TwitchService        Twitch        { get; private set; } = null!;
     internal static ZoneVisionOverlay   Overlay       { get; private set; } = null!;
+    internal static CreditsWindow        Credits       { get; private set; } = null!;
+    internal static MainWindow           MainWin       { get; private set; } = null!;
 
     private DateTime _lastStaffSync = DateTime.Now;
     private const double StaffSyncIntervalMinutes = 1.0;
@@ -46,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly SettingsWindow      _settingsWindow;
     private readonly ZoneVisionOverlay   _overlay;
     private readonly StaffDetailPopup    _staffPopup;
+    private readonly CreditsWindow       _creditsWindow;
 
     private const string CmdZone       = "/zone";
     private const string CmdZoneVision = "/zonevision";
@@ -75,12 +78,16 @@ public sealed class Plugin : IDalamudPlugin
         _settingsWindow = new SettingsWindow();
         _mainWindow     = new MainWindow(_staffPopup, _settingsWindow);
         _overlay        = new ZoneVisionOverlay();
+        _creditsWindow  = new CreditsWindow();
         Overlay         = _overlay;
+        Credits         = _creditsWindow;
+        MainWin         = _mainWindow;
 
         _windowSystem.AddWindow(_mainWindow);
         _windowSystem.AddWindow(_settingsWindow);
         _windowSystem.AddWindow(_overlay);
         _windowSystem.AddWindow(_staffPopup);
+        _windowSystem.AddWindow(_creditsWindow);
 
         PluginInterface.UiBuilder.Draw         += _windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi   += ToggleMain;
@@ -122,6 +129,7 @@ public sealed class Plugin : IDalamudPlugin
         _windowSystem.RemoveAllWindows();
         _mainWindow.Dispose();
         _staffPopup.Dispose();
+        _creditsWindow.Dispose();
         _timeLock.Dispose();
         Announcements.Dispose();
         Twitch.Dispose();

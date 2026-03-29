@@ -250,8 +250,26 @@ public class MainWindow : Window, IDisposable
         dl.AddLine(new Vector2(lx, sMin.Y + 11f), new Vector2(lx + lw, sMin.Y + 11f), lineCol, 1.2f);
         dl.AddLine(new Vector2(lx, sMin.Y + 15f), new Vector2(lx + lw, sMin.Y + 15f), lineCol, 1.2f);
 
+        const string credLabel = "CREDITS";
+        var   credLblSz  = ImGui.CalcTextSize(credLabel);
+        float credBtnW   = credLblSz.X + 18f;
+        float credLocX   = settLocX - credBtnW - btnGap;
+        float credScX    = settScX  - credBtnW - btnGap;
+        ImGui.SetCursorPos(new Vector2(credLocX, btnY));
+        ImGui.InvisibleButton("##tbCredits", new Vector2(credBtnW, btnSz));
+        bool credHov     = ImGui.IsItemHovered();
+        bool credClicked = ImGui.IsItemClicked();
+
+        var crMin = new Vector2(credScX, btnYsc);
+        var crMax = crMin + new Vector2(credBtnW, btnSz);
+        DrawHudRect(dl, crMin, crMax, 5f,
+                    credHov ? U(CRed) : WithAlpha(U(CRed), 0x40), 1.2f, credHov);
+        uint credTxtCol = credHov ? 0xFFFFFFFF : U(CGrey);
+        dl.AddText(crMin + new Vector2((credBtnW - credLblSz.X) * 0.5f, (btnSz - credLblSz.Y) * 0.5f),
+                   credTxtCol, credLabel);
+
         // Drag area, declared last for lower input priority
-        float dragW = settLocX - lp.X - btnGap;
+        float dragW = credLocX - lp.X - btnGap;
         ImGui.SetCursorPos(lp);
         ImGui.InvisibleButton("##tbDrag", new Vector2(dragW, H));
         if (ImGui.IsItemActive() && ImGui.IsMouseDragging(ImGuiMouseButton.Left))
@@ -278,7 +296,8 @@ public class MainWindow : Window, IDisposable
 
         ImGui.SetCursorPos(new Vector2(lp.X, lp.Y + H + 2));
 
-        if (settClicked) _settings.IsOpen = !_settings.IsOpen;
+        if (settClicked)  _settings.IsOpen = !_settings.IsOpen;
+        if (credClicked)  Plugin.Credits.IsOpen = !Plugin.Credits.IsOpen;
         return closeClicked;
     }
 
@@ -344,6 +363,7 @@ public class MainWindow : Window, IDisposable
         var adjDate = now.Hour < 3 ? now.Date.AddDays(-1) : now.Date;
         int? evDay  = CurrentEventDay();
 
+        bool eventConcluded = (!evDay.HasValue && adjDate >= day1) || adjDate >= day2;
         float availW = ImGui.GetContentRegionAvail().X;
 
         using var scroll = ImRaii.Child("HomeScroll", Vector2.Zero, false);
@@ -353,7 +373,7 @@ public class MainWindow : Window, IDisposable
 
         {
             bool pre  = adjDate < day1;
-            bool isEv = evDay.HasValue;
+            bool isEv = evDay.HasValue && !eventConcluded;
 
             string  line1, line2;
             string? line3 = null;
@@ -476,7 +496,7 @@ public class MainWindow : Window, IDisposable
         }
 
         ImGui.Spacing();
-        DrawHomeSyncSection();
+        DrawHomeCreditsButton();
         ImGui.Spacing();
 
         // Only consider a DJ live during actual event days
@@ -504,7 +524,7 @@ public class MainWindow : Window, IDisposable
                 var   noLiveSp  = ImGui.GetCursorScreenPos();
                 var   startNL   = ImGui.GetCursorPos();
                 const float NLH = 46f;
-                const string noLiveTxt = "NO DJ CURRENTLY LIVE";
+                string noLiveTxt = eventConcluded ? "EVENT CONCLUDED" : "NO DJ CURRENTLY LIVE";
                 dl.AddRectFilled(noLiveSp, noLiveSp + new Vector2(availW, NLH), U(new Vector4(0.04f, 0.01f, 0.01f, 1f)), 3f);
                 DrawHudRect(dl, noLiveSp, noLiveSp + new Vector2(availW, NLH), 3f, U(new Vector4(0.22f, 0.02f, 0.02f, 0.7f)), 1f);
                 var   nlSz = ImGui.CalcTextSize(noLiveTxt);
@@ -540,13 +560,12 @@ public class MainWindow : Window, IDisposable
                 ? actsToday.FindAll(a => IsActivityActive(a.StartTime, nowMin))
                 : new List<Zone.Models.Activity>();
 
-            bool postEvent = !evDay.HasValue && adjDate >= day1;
-            if (active.Count == 0 || postEvent)
+            if (active.Count == 0 || eventConcluded)
             {
                 var   noActSp  = ImGui.GetCursorScreenPos();
                 var   startNA  = ImGui.GetCursorPos();
                 const float NAH = 46f;
-                string noActTxt = postEvent ? "EVENT CONCLUDED" :
+                string noActTxt = eventConcluded ? "EVENT CONCLUDED" :
                                   evDay.HasValue && now.Hour >= 3 && now.Hour < 17 ? "ACTIVITIES START AT 17:00 ST" : "NO ACTIVITY IN PROGRESS";
                 dl.AddRectFilled(noActSp, noActSp + new Vector2(availW, NAH), U(new Vector4(0.04f, 0.01f, 0.01f, 1f)), 3f);
                 DrawHudRect(dl, noActSp, noActSp + new Vector2(availW, NAH), 3f, U(new Vector4(0.22f, 0.02f, 0.02f, 0.7f)), 1f);
@@ -587,6 +606,9 @@ public class MainWindow : Window, IDisposable
             }
         }
 
+        ImGui.Spacing();
+        ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize("Plugin developed by Nala Praline").X) * 0.5f);
+        ImGui.TextColored(new Vector4(0.35f, 0.35f, 0.35f, 1f), "Plugin developed by Nala Praline");
     }
 
     private static void DrawHomeInfoPanel(float splitX)
@@ -625,6 +647,48 @@ public class MainWindow : Window, IDisposable
             Dalamud.Utility.Util.OpenLink(EventWebsiteUrl);
 
         ImGui.SetCursorPos(new Vector2(lp.X, lp.Y + panelH));
+    }
+
+    private static void DrawHomeCreditsButton()
+    {
+        float availW = ImGui.GetContentRegionAvail().X;
+        var   dl     = ImGui.GetWindowDrawList();
+
+        // Section title with lines
+        const string titleTxt = "CREDITS";
+        var   titleSz = ImGui.CalcTextSize(titleTxt);
+        var   titleSp = ImGui.GetCursorScreenPos();
+        float titleX  = titleSp.X + (availW - titleSz.X) * 0.5f;
+        float lineY   = titleSp.Y + titleSz.Y * 0.5f;
+        dl.AddLine(new Vector2(titleSp.X,               lineY), new Vector2(titleX - 10f,              lineY), U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+        dl.AddLine(new Vector2(titleX + titleSz.X + 10f, lineY), new Vector2(titleSp.X + availW,       lineY), U(new Vector4(0.28f, 0.03f, 0.03f, 0.8f)), 1f);
+        dl.AddText(new Vector2(titleX, titleSp.Y), U(new Vector4(0.35f, 0.35f, 0.35f, 1f)), titleTxt);
+        ImGui.Dummy(new Vector2(availW, titleSz.Y + 6f));
+
+        // Credits button
+        const float H = 52f;
+        var   sp      = ImGui.GetCursorScreenPos();
+        var   lp      = ImGui.GetCursorPos();
+        const string lbl = "VIEW ZONE CREDITS";
+        var   lblSz   = ImGui.CalcTextSize(lbl);
+
+        ImGui.SetCursorPos(lp);
+        ImGui.InvisibleButton("##creditsHomeBtn", new Vector2(availW, H));
+        bool hov     = ImGui.IsItemHovered();
+        bool clicked = ImGui.IsItemClicked();
+
+        dl.AddRectFilled(sp, sp + new Vector2(availW, H),
+                         hov ? U(new Vector4(0.75f, 0.08f, 0.08f, 1f)) : U(new Vector4(0.45f, 0.05f, 0.05f, 1f)), 4f);
+        DrawHudRect(dl, sp, sp + new Vector2(availW, H), 4f,
+                    hov ? U(new Vector4(1f, 0.30f, 0.30f, 1f)) : U(CRed), hov ? 2f : 1.5f, hov);
+
+        dl.AddText(sp + new Vector2((availW - lblSz.X) * 0.5f, (H - lblSz.Y) * 0.5f),
+                   0xFFFFFFFF, lbl);
+
+        if (clicked)
+            Plugin.Credits.IsOpen = !Plugin.Credits.IsOpen;
+
+        ImGui.SetCursorPos(new Vector2(lp.X, lp.Y + H));
     }
 
     private static void DrawHomeSyncSection()
@@ -1149,7 +1213,7 @@ public class MainWindow : Window, IDisposable
                     else if (TimeSpan.TryParse(parts2[0], out var aStart))
                         isPast = now > aStart + TimeSpan.FromHours(2);
                 }
-                else if (evDay > _activityDay)
+                else if (evDay > _activityDay || !evDay.HasValue)
                 {
                     isPast = true;
                 }
