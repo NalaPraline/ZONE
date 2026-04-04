@@ -4,7 +4,7 @@
     "Name": "Zone",
     "InternalName": "Zone",
     "AssemblyVersion": "1.2.35.0",
-    "DownloadCount": 645,
+    "DownloadCount": 648,
     "Changelog": "Final update for ZONE 2026 — thank you to everyone who attended.",
     "Punchline": "The official ZONE event companion plugin.",
     "Description": "Zone is the all-in-one companion for ZONE events. Features a live DJ lineup, activity tracker, staff directory, Zone Vision HUD overlay, and midnight time lock.\n\nCommands:\n/zone - Open Zone\n/zonevision - Toggle HUD overlay",
